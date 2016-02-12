@@ -38,9 +38,36 @@
 
     <dependencies>
         <dependency>
+             <groupId>com.github.marschall</groupId>
+             <artifactId>memoryfilesystem</artifactId>
+             <version>[0.8.0,)</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>[1,)</version>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>[4.12]</version>
+            <artifactId>junit-dep</artifactId>
+            <version>[4.9,)</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.stefanbirkner</groupId>
+            <artifactId>fishbowl</artifactId>
+            <version>[1.4.0]</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>[0.1.53]</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>[2.4]</version>
             <scope>test</scope>
         </dependency>
         <dependency>

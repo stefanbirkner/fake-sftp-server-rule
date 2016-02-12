@@ -25,7 +25,23 @@ Fake SFTP Server Rule is available from [Maven Central](http://search.maven.org/
 
 ## Usage
 
-TODO
+The Fake SFTP Server Rule is used by adding it to your test class.
+
+    import com.github.stefanbirkner.fakesftpserver.rule.FakeSftpServerRule;
+
+    public class TestClass {
+      @Rule
+      public final FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+
+      ...
+    }
+
+This rule starts a server before your test and stops it afterwards.
+
+You can interact with the SFTP server by using the SFTP protocol with an
+arbitrary username and password. (The server accepts every combination of
+username and password.) The port of the server is obtained by
+`sftpServer.getPort()`.
 
 
 ## Contributing
@@ -42,7 +58,7 @@ simply have a question about Fake SFTP Server Rule.
 
 Fake SFTP Server Rule is build with [Maven](http://maven.apache.org/). If you
 want to contribute code than
-  
+
 * Please write a test for your change.
 * Ensure that you didn't break the build by running `mvn verify -Dgpg.skip`.
 * Fork the repo and create a pull request. (See [Understanding the GitHub Flow](https://guides.github.com/introduction/flow/index.html))

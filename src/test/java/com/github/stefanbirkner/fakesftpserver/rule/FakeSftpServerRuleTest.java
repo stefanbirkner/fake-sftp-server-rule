@@ -9,6 +9,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.ConnectException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestThatThrowsExceptionWithRule;
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestWithRule;
@@ -146,6 +148,81 @@ public class FakeSftpServerRuleTest {
     }
 
     @Test
+    public void a_text_file_that_is_written_to_the_server_can_be_retrieved_with_the_rule() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            uploadFile(sftpServer, "/dummy_directory/dummy_file.txt",
+                "dummy content with umlaut ü".getBytes(UTF_8));
+            String fileContent = sftpServer.getFileContent(
+                "/dummy_directory/dummy_file.txt", UTF_8);
+            assertThat(fileContent)
+                .isEqualTo("dummy content with umlaut ü");
+        }, sftpServer);
+    }
+
+    @Test
+    public void a_text_file_cannot_be_retrieved_before_the_test_is_started() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.getFileContent("/dummy_directory/dummy_file.txt"));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to download file because test has not been"
+                + " started or is already finished.");
+    }
+
+    @Test
+    public void a_text_file_cannot_be_retrieved_after_the_test_is_finished() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> uploadFile(sftpServer,
+            "/dummy_directory/dummy_file.txt", "dummy content".getBytes(UTF_8)),
+            sftpServer);
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.getFileContent("/dummy_directory/dummy_file.txt"));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to download file because test has not been"
+                + " started or is already finished.");
+    }
+
+    @Test
+    public void a_binary_file_that_is_written_to_the_server_can_be_retrieved_with_the_rule() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            uploadFile(sftpServer, "/dummy_directory/dummy_file.bin",
+                DUMMY_CONTENT);
+            byte[] fileContent = sftpServer.getFileContent(
+                "/dummy_directory/dummy_file.bin");
+            assertThat(fileContent).isEqualTo(DUMMY_CONTENT);
+        }, sftpServer);
+    }
+
+    @Test
+    public void a_binary_file_cannot_be_retrieved_before_the_test_is_started() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.getFileContent("/dummy_directory/dummy_file.bin"));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to download file because test has not been"
+                + " started or is already finished.");
+    }
+
+    @Test
+    public void a_binary_file_cannot_be_retrieved_after_the_test_is_finished() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> uploadFile(sftpServer,
+            "/dummy_directory/dummy_file.bin", DUMMY_CONTENT),
+            sftpServer);
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.getFileContent("/dummy_file.bin"));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to download file because test has not been"
+                + " started or is already finished.");
+    }
+
+    @Test
     public void after_a_successful_test_SFTP_server_is_shutdown() {
         FakeSftpServerRule sftpServer = new FakeSftpServerRule();
         executeTestWithRule(() -> {
@@ -194,5 +271,20 @@ public class FakeSftpServerRuleTest {
             channel.disconnect();
             session.disconnect();
         }
+    }
+
+    private void uploadFile(FakeSftpServerRule server, String pathAsString,
+            byte[] content) throws JSchException, SftpException, IOException {
+        Session session = connectToServer(server);
+        ChannelSftp channel = connectSftpChannel(session);
+        try {
+            Path path = Paths.get(pathAsString);
+            channel.mkdir(path.getParent().toString());
+            channel.put(new ByteArrayInputStream(content), pathAsString);
+        } finally {
+            channel.disconnect();
+            session.disconnect();
+        }
+
     }
 }

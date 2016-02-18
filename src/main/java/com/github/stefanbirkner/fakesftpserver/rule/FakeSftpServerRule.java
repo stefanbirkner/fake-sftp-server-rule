@@ -14,8 +14,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Path;
 
 import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
-import static java.nio.file.Files.createDirectories;
-import static java.nio.file.Files.write;
+import static java.nio.file.Files.*;
 import static java.util.Collections.singletonList;
 
 /**
@@ -52,6 +51,26 @@ import static java.util.Collections.singletonList;
  *   byte[] content = createContent();
  *   {@link #putFile(String, byte[]) sftpServer.putFile}("/directory/file.bin", content);
  *   //code that downloads the file
+ * }
+ * </pre>
+ *
+ * <h2>Testing code that writes files</h2>
+ * <p>If you test code that writes files to an SFTP server then you need to
+ * verify the upload. Fake SFTP Server Rule provides a shortcut for getting the
+ * file's content from the server.
+ * <pre>
+ * &#064;Test
+ * public void testTextFile() {
+ *   //code that uploads the file
+ *   String fileContent = {@link #getFileContent(String, Charset) sftpServer.getFileContent}("/directory/file.txt", UTF_8);
+ *   ...
+ * }
+ *
+ * &#064;Test
+ * public void testBinaryFile() {
+ *   //code that uploads the file
+ *   byte[] fileContent = {@link #getFileContent(String) sftpServer.getFileContent}("/directory/file.bin");
+ *   ...
  * }
  * </pre>
  */
@@ -91,12 +110,39 @@ public class FakeSftpServerRule implements TestRule {
      * @throws IOException if the file cannot be written.
      */
     public void putFile(String path, byte[] content) throws IOException {
-        verifyThatTestIsRunning();
+        verifyThatTestIsRunning("upload");
         Path pathAsObject = fileSystem.getPath(path);
         Path directory = pathAsObject.getParent();
         if (directory != null && !directory.equals(pathAsObject.getRoot()))
             createDirectories(directory);
         write(pathAsObject, content);
+    }
+
+    /**
+     * Get a text file from the SFTP server. The file is decoded using the
+     * specified encoding.
+     * @param path the path to the file.
+     * @param encoding the file's encoding.
+     * @return the content of the text file.
+     * @throws IOException if the file cannot be read.
+     * @throws IllegalStateException if not called from within a test.
+     */
+    public String getFileContent(String path, Charset encoding) throws IOException {
+        byte[] content = getFileContent(path);
+        return new String(content, encoding);
+    }
+
+    /**
+     * Get a file from the SFTP server.
+     * @param path the path to the file.
+     * @return the content of the file.
+     * @throws IOException if the file cannot be read.
+     * @throws IllegalStateException if not called from within a test.
+     */
+    public byte[] getFileContent(String path) throws IOException {
+        verifyThatTestIsRunning("download");
+        Path pathAsObject = fileSystem.getPath(path);
+        return readAllBytes(pathAsObject);
     }
 
     @Override
@@ -130,9 +176,9 @@ public class FakeSftpServerRule implements TestRule {
         return server;
     }
 
-    private void verifyThatTestIsRunning() {
+    private void verifyThatTestIsRunning(String mode) {
         if (fileSystem == null)
-            throw new IllegalStateException("Failed to upload file because"
+            throw new IllegalStateException("Failed to " + mode + " file because"
                 + " test has not been started or is already finished.");
     }
 }

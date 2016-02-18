@@ -43,6 +43,25 @@ arbitrary username and password. (The server accepts every combination of
 username and password.) The port of the server is obtained by
 `sftpServer.getPort()`.
 
+### Testing code that reads files
+
+If you test code that reads files from an SFTP server then you need a server
+that provides these files. Fake SFTP Server Rule provides a shortcut for
+uploading files to the server.
+
+    @Test
+    public void testTextFile() {
+      sftpServer.putFile("/directory/file.txt", "content of file", UTF_8);
+      //code that downloads the file
+    }
+
+    @Test
+    public void testBinaryFile() {
+      byte[] content = createContent();
+      sftpServer.putFile("/directory/file.bin", content);
+      //code that downloads the file
+    }
+
 
 ## Contributing
 

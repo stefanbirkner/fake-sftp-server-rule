@@ -62,6 +62,25 @@ uploading files to the server.
       //code that downloads the file
     }
 
+### Testing code that writes files
+
+If you test code that writes files to an SFTP server then you need to verify
+the upload. Fake SFTP Server Rule provides a shortcut for getting the file's
+content from the server.
+
+    @Test
+    public void testTextFile() {
+      //code that uploads the file
+      String fileContent = sftpServer.getFileContent("/directory/file.txt", UTF_8);
+      ...
+    }
+
+    @Test
+    public void testBinaryFile() {
+      //code that uploads the file
+      byte[] fileContent = sftpServer.getFileContent("/directory/file.bin");
+      ...
+    }
 
 ## Contributing
 

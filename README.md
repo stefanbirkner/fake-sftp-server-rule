@@ -8,7 +8,7 @@ your tests are running. It uses the SFTP server of the
 
 Fake SFTP Server Rule is published under the
 [MIT license](http://opensource.org/licenses/MIT). It uses Java 8. Please
-[open an issue](https://github.com/stefanbirkner/jmarkdown2revealjs/issues/new)
+[open an issue](https://github.com/stefanbirkner/fake-sftp-server-rule/issues/new)
 if you want to use it with an older version of Java.
 
 
@@ -19,7 +19,7 @@ Fake SFTP Server Rule is available from [Maven Central](http://search.maven.org/
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>0.1.0</version>
+      <version>0.1.1</version>
     </dependency>
 
 

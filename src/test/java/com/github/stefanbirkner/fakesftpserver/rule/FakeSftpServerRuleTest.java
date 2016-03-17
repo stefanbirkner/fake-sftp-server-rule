@@ -223,6 +223,15 @@ public class FakeSftpServerRuleTest {
     }
 
     @Test
+    public void multiple_connections_to_the_server_are_possible() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            connectAndDisconnect(sftpServer);
+            connectAndDisconnect(sftpServer);
+        }, sftpServer);
+    }
+
+    @Test
     public void after_a_successful_test_SFTP_server_is_shutdown() {
         FakeSftpServerRule sftpServer = new FakeSftpServerRule();
         executeTestWithRule(() -> {
@@ -258,6 +267,14 @@ public class FakeSftpServerRuleTest {
         ChannelSftp channel = (ChannelSftp) session.openChannel("sftp");
         channel.connect();
         return channel;
+    }
+
+    private void connectAndDisconnect(FakeSftpServerRule sftpServer)
+            throws JSchException {
+        Session session = connectToServer(sftpServer);
+        ChannelSftp channel = connectSftpChannel(session);
+        channel.disconnect();
+        session.disconnect();
     }
 
     private byte[] downloadFile(FakeSftpServerRule server, String path)

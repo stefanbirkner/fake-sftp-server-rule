@@ -75,6 +75,19 @@ import static java.util.Collections.singletonList;
  *   ...
  * }
  * </pre>
+ *
+ * <h2>Testing existence of files</h2>
+ * <p>If you want to check whether a file hast been created or deleted then you
+ * can verify that it exists or not.
+ * <pre>
+ * &#064;Test
+ * public void testFile() {
+ *   //code that uploads or deletes the file
+ *   boolean exists = {@link #existsFile(String) sftpServer.existsFile}("/directory/file.txt");
+ *   ...
+ * }
+ * </pre>
+ * <p>The method returns {@code true} iff the file exists and it is not a directory.
  */
 public class FakeSftpServerRule implements TestRule {
     private static final int PORT = 23454;
@@ -145,6 +158,19 @@ public class FakeSftpServerRule implements TestRule {
         verifyThatTestIsRunning("download");
         Path pathAsObject = fileSystem.getPath(path);
         return readAllBytes(pathAsObject);
+    }
+
+    /**
+     * Checks the existence of a file. returns {@code true} iff the file exists
+     * and it is not a directory.
+     * @param path the path to the file.
+     * @return {@code true} iff the file exists and it is not a directory.
+     * @throws IllegalStateException if not called from within a test.
+     */
+    public boolean existsFile(String path) {
+        verifyThatTestIsRunning("check existence of");
+        Path pathAsObject = fileSystem.getPath(path);
+        return exists(pathAsObject) && !isDirectory(pathAsObject);
     }
 
     @Override

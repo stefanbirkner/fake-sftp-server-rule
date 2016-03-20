@@ -223,6 +223,63 @@ public class FakeSftpServerRuleTest {
     }
 
     @Test
+    public void exists_returns_true_for_a_file_that_exists_on_the_server() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            uploadFile(
+                sftpServer, "/dummy_directory/dummy_file.bin", DUMMY_CONTENT);
+            boolean exists = sftpServer.existsFile(
+                "/dummy_directory/dummy_file.bin");
+            assertThat(exists).isTrue();
+        }, sftpServer);
+    }
+
+    @Test
+    public void exists_returns_false_for_a_file_that_does_not_exists_on_the_server() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            boolean exists = sftpServer.existsFile(
+                "/dummy_directory/dummy_file.bin");
+            assertThat(exists).isFalse();
+        }, sftpServer);
+    }
+
+    @Test
+    public void exists_returns_false_for_a_directory_that_exists_on_the_server() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            uploadFile(
+                sftpServer, "/dummy_directory/dummy_file.bin", DUMMY_CONTENT);
+            boolean exists = sftpServer.existsFile("/dummy_directory");
+            assertThat(exists).isFalse();
+        }, sftpServer);
+    }
+
+    @Test
+    public void existence_of_a_file_cannot_be_checked_before_the_test_is_started() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.existsFile("/dummy_file.bin"));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to check existence of file because test has not"
+                + " been started or is already finished.");
+    }
+
+    @Test
+    public void existence_of_a_file_cannot_be_checked_after_the_test_is_finished() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+        }, sftpServer);
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.existsFile("/dummy_file.bin"));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to check existence of file because test has not"
+                + " been started or is already finished.");
+    }
+
+    @Test
     public void multiple_connections_to_the_server_are_possible() {
         FakeSftpServerRule sftpServer = new FakeSftpServerRule();
         executeTestWithRule(() -> {

@@ -19,7 +19,7 @@ Fake SFTP Server Rule is available from [Maven Central](http://search.maven.org/
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>0.1.1</version>
+      <version>0.2.0</version>
     </dependency>
 
 
@@ -81,6 +81,21 @@ content from the server.
       byte[] fileContent = sftpServer.getFileContent("/directory/file.bin");
       ...
     }
+
+### Testing existence of files
+
+If you want to check whether a file hast been created or deleted then you can
+verify that it exists or not.
+
+    @Test
+    public void testFile() {
+      //code that uploads or deletes the file
+      boolean exists = sftpServer.existsFile("/directory/file.txt");
+      ...
+    }
+
+The method returns `true` iff the file exists and it is not a directory.
+
 
 ## Contributing
 

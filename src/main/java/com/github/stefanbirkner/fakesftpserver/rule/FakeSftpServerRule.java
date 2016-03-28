@@ -55,6 +55,15 @@ import static java.util.Collections.singletonList;
  *   //code that downloads the file
  * }
  * </pre>
+ * <p>If you need an empty directory then you can use the method
+ * {@link #createDirectory(String)}.
+ * <pre>
+ * &#064;Test
+ * public void testTextFile() {
+ *   sftpServer.{@link #createDirectory(String) createDirectory}("/a/directory");
+ *   //code that reads from or writes to that directory
+ * }
+ * </pre>
  *
  * <h2>Testing code that writes files</h2>
  * <p>If you test code that writes files to an SFTP server then you need to
@@ -125,12 +134,23 @@ public class FakeSftpServerRule implements TestRule {
      * @throws IOException if the file cannot be written.
      */
     public void putFile(String path, byte[] content) throws IOException {
-        verifyThatTestIsRunning("upload");
+        verifyThatTestIsRunning("upload file");
         Path pathAsObject = fileSystem.getPath(path);
         Path directory = pathAsObject.getParent();
         if (directory != null && !directory.equals(pathAsObject.getRoot()))
             createDirectories(directory);
         write(pathAsObject, content);
+    }
+
+    /**
+     * Create a directory on the SFTP server.
+     * @param path the directory's path.
+     * @throws IOException if the directory cannot be created.
+     */
+    public void createDirectory(String path) throws IOException {
+        verifyThatTestIsRunning("create directory");
+        Path pathAsObject = fileSystem.getPath(path);
+        createDirectories(pathAsObject);
     }
 
     /**
@@ -155,7 +175,7 @@ public class FakeSftpServerRule implements TestRule {
      * @throws IllegalStateException if not called from within a test.
      */
     public byte[] getFileContent(String path) throws IOException {
-        verifyThatTestIsRunning("download");
+        verifyThatTestIsRunning("download file");
         Path pathAsObject = fileSystem.getPath(path);
         return readAllBytes(pathAsObject);
     }
@@ -168,7 +188,7 @@ public class FakeSftpServerRule implements TestRule {
      * @throws IllegalStateException if not called from within a test.
      */
     public boolean existsFile(String path) {
-        verifyThatTestIsRunning("check existence of");
+        verifyThatTestIsRunning("check existence of file");
         Path pathAsObject = fileSystem.getPath(path);
         return exists(pathAsObject) && !isDirectory(pathAsObject);
     }
@@ -210,7 +230,7 @@ public class FakeSftpServerRule implements TestRule {
 
     private void verifyThatTestIsRunning(String mode) {
         if (fileSystem == null)
-            throw new IllegalStateException("Failed to " + mode + " file because"
+            throw new IllegalStateException("Failed to " + mode + " because"
                 + " test has not been started or is already finished.");
     }
 

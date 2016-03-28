@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.net.ConnectException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Vector;
 
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestThatThrowsExceptionWithRule;
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestWithRule;
@@ -144,6 +145,44 @@ public class FakeSftpServerRuleTest {
         assertThat(exception)
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Failed to upload file because test has not been"
+                + " started or is already finished.");
+    }
+
+    @Test
+    public void a_directory_that_is_created_with_the_rule_can_be_read_by_a_client() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            sftpServer.createDirectory("/a/directory");
+            Session session = connectToServer(sftpServer);
+            ChannelSftp channel = connectSftpChannel(session);
+            Vector entries = channel.ls("/a/directory");
+            assertThat(entries).hasSize(2); //these are the entries . and ..
+            channel.disconnect();
+            session.disconnect();
+        }, sftpServer);
+    }
+
+    @Test
+    public void a_directory_cannot_be_created_before_the_test_is_started() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.createDirectory("/a/directory"));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to create directory because test has not been"
+                + " started or is already finished.");
+    }
+
+    @Test
+    public void a_directory_cannot_be_created_after_the_test_is_finished() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+        }, sftpServer);
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.createDirectory("/a/directory"));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to create directory because test has not been"
                 + " started or is already finished.");
     }
 

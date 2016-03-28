@@ -19,7 +19,7 @@ Fake SFTP Server Rule is available from [Maven Central](http://search.maven.org/
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>0.2.0</version>
+      <version>0.3.0</version>
     </dependency>
 
 
@@ -61,6 +61,16 @@ uploading files to the server.
       sftpServer.putFile("/directory/file.bin", content);
       //code that downloads the file
     }
+
+If you need an empty directory then you can use the method
+`createDirectory(String)`.
+
+    @Test
+    public void testTextFile() {
+      sftpServer.createDirectory("/a/directory");
+      //code that reads from or writes to that directory
+    }
+
 
 ### Testing code that writes files
 

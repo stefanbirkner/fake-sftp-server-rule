@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class FakeSftpServerRuleTest {
     private static final byte[] DUMMY_CONTENT = new byte[]{1, 4, 2, 4, 2, 4};
+    private static final InputStream DUMMY_STREAM = new ByteArrayInputStream(DUMMY_CONTENT);
     private static final JSch JSCH = new JSch();
     private static final int TIMEOUT = 100;
 
@@ -142,6 +143,53 @@ public class FakeSftpServerRuleTest {
         }, sftpServer);
         Throwable exception = exceptionThrownBy(() ->
             sftpServer.putFile("/dummy_file.bin", DUMMY_CONTENT));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to upload file because test has not been"
+                + " started or is already finished.");
+    }
+
+    @Test
+    public void a_file_from_a_stream_that_is_put_to_root_directory_via_the_rule_can_be_read_from_server() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            InputStream is = new ByteArrayInputStream(DUMMY_CONTENT);
+            sftpServer.putFile("/dummy_file.bin", is);
+            byte[] file = downloadFile(sftpServer, "/dummy_file.bin");
+            assertThat(file).isEqualTo(DUMMY_CONTENT);
+        }, sftpServer);
+    }
+
+    @Test
+    public void a_file_from_a_stream_that_is_put_to_directory_via_the_rule_can_be_read_from_server() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            InputStream is = new ByteArrayInputStream(DUMMY_CONTENT);
+            sftpServer.putFile("/dummy_directory/dummy_file.bin", is);
+            byte[] file = downloadFile(sftpServer,
+                "/dummy_directory/dummy_file.bin");
+            assertThat(file).isEqualTo(DUMMY_CONTENT);
+        }, sftpServer);
+    }
+
+    @Test
+    public void a_file_from_a_stream_cannot_be_put_before_the_test_is_started() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.putFile("/dummy_file.bin", DUMMY_STREAM));
+        assertThat(exception)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Failed to upload file because test has not been"
+                + " started or is already finished.");
+    }
+
+    @Test
+    public void a_file_from_a_stream_cannot_be_put_after_the_test_is_finished() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+        }, sftpServer);
+        Throwable exception = exceptionThrownBy(() ->
+            sftpServer.putFile("/dummy_file.bin", DUMMY_STREAM));
         assertThat(exception)
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Failed to upload file because test has not been"

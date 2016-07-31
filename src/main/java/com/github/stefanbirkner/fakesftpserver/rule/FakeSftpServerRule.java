@@ -9,6 +9,7 @@ import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.nio.file.attribute.UserPrincipalLookupService;
@@ -52,6 +53,17 @@ import static java.util.Collections.singletonList;
  * public void testBinaryFile() {
  *   byte[] content = createContent();
  *   {@link #putFile(String, byte[]) sftpServer.putFile}("/directory/file.bin", content);
+ *   //code that downloads the file
+ * }
+ * </pre>
+ * <p>Test data that is provided as an input stream can be uploaded directly
+ * from that input stream. This is very handy if your test data is available as
+ * a resource.
+ * <pre>
+ * &#064;Test
+ * public void testFileFromInputStream() {
+ *   InputStream is = getClass().getResourceAsStream("data.bin");
+ *   {@link #putFile(String, InputStream) sftpServer.putFile}("/directory/file.bin", is);
  *   //code that downloads the file
  * }
  * </pre>
@@ -140,6 +152,23 @@ public class FakeSftpServerRule implements TestRule {
         if (directory != null && !directory.equals(pathAsObject.getRoot()))
             createDirectories(directory);
         write(pathAsObject, content);
+    }
+
+    /**
+     * Put a file on the SFTP folder. The file is available by the specified
+     * path. The file content is read from an {@code InputStream}.
+     * @param path the path to the file.
+     * @param is an {@code InputStream} that provides the file's content.
+     * @throws IOException if the file cannot be written or the input stream
+     * cannot be read.
+     */
+    public void putFile(String path, InputStream is) throws IOException {
+        verifyThatTestIsRunning("upload file");
+        Path pathAsObject = fileSystem.getPath(path);
+        Path directory = pathAsObject.getParent();
+        if (directory != null && !directory.equals(pathAsObject.getRoot()))
+            createDirectories(directory);
+        copy(is, pathAsObject);
     }
 
     /**

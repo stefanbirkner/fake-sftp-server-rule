@@ -19,7 +19,7 @@ Fake SFTP Server Rule is available from [Maven Central](http://search.maven.org/
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>0.3.0</version>
+      <version>1.0.0</version>
     </dependency>
 
 
@@ -59,6 +59,16 @@ uploading files to the server.
     public void testBinaryFile() {
       byte[] content = createContent();
       sftpServer.putFile("/directory/file.bin", content);
+      //code that downloads the file
+    }
+
+Test data that is provided as an input stream can be uploaded directly from that
+input stream. This is very handy if your test data is available as a resource.
+
+    @Test
+    public void testFileFromInputStream() {
+      InputStream is = getClass().getResourceAsStream("data.bin");
+      sftpServer.putFile("/directory/file.bin", is);
       //code that downloads the file
     }
 

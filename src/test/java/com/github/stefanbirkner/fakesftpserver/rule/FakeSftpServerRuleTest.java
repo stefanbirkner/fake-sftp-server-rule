@@ -38,6 +38,14 @@ public class FakeSftpServerRuleTest {
     }
 
     @Test
+    public void SFTP_server_accepts_connections_with_random_port() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule(0);
+        executeTestWithRule(
+            () -> connectToServer(sftpServer),
+            sftpServer);
+    }
+
+    @Test
     public void a_file_that_is_written_to_the_SFTP_server_can_be_read() {
         FakeSftpServerRule sftpServer = new FakeSftpServerRule();
         executeTestWithRule(() -> {

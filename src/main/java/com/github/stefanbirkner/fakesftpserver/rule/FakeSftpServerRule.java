@@ -118,12 +118,13 @@ public class FakeSftpServerRule implements TestRule {
     private int assignedPort;
 
     public FakeSftpServerRule() {
-        this(DEFAULT_PORT);
+        this.port = DEFAULT_PORT;
     }
 
-    public FakeSftpServerRule(int port) {
+    public FakeSftpServerRule withPort(int port) {
         assert port >= 0;
         this.port = port;
+        return this;
     }
 
     /**

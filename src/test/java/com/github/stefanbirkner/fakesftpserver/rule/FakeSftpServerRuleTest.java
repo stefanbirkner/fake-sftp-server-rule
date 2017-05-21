@@ -39,7 +39,7 @@ public class FakeSftpServerRuleTest {
 
     @Test
     public void SFTP_server_accepts_connections_with_random_port() {
-        FakeSftpServerRule sftpServer = new FakeSftpServerRule(0);
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule().withPort(0);
         executeTestWithRule(
             () -> connectToServer(sftpServer),
             sftpServer);

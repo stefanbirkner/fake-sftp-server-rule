@@ -121,6 +121,12 @@ public class FakeSftpServerRule implements TestRule {
         this.port = DEFAULT_PORT;
     }
 
+    /**
+     * Change the port of the SFTP server.
+     *
+     * @param port Port of the SFTP server
+     * @return This SFTP Server instance
+     */
     public FakeSftpServerRule withPort(int port) {
         assert port >= 0;
         this.port = port;

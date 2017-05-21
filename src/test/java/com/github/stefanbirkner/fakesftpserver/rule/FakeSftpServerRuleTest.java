@@ -40,9 +40,20 @@ public class FakeSftpServerRuleTest {
     @Test
     public void SFTP_server_accepts_connections_with_random_port() {
         FakeSftpServerRule sftpServer = new FakeSftpServerRule().withPort(0);
-        executeTestWithRule(
-            () -> connectToServer(sftpServer),
-            sftpServer);
+        executeTestWithRule(() -> {
+            connectToServer(sftpServer);
+            assertThat(sftpServer.getPort()).isNotEqualTo(0);
+        }, sftpServer);
+    }
+
+    @Test
+    public void SFTP_server_accepts_connections_with_different_port() {
+        final int diffPort = 12345;
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule().withPort(diffPort);
+        executeTestWithRule(() -> {
+            connectToServer(sftpServer);
+            assertThat(sftpServer.getPort()).isEqualTo(diffPort);
+        }, sftpServer);
     }
 
     @Test

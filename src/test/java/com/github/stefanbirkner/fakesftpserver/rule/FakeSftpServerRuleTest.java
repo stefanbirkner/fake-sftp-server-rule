@@ -47,13 +47,18 @@ public class FakeSftpServerRuleTest {
     }
 
     @Test
-    public void SFTP_server_accepts_connections_with_different_port() {
-        final int diffPort = 12345;
-        FakeSftpServerRule sftpServer = new FakeSftpServerRule().withPort(diffPort);
+    public void SFTP_server_accepts_connections_with_specified_port() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule().withPort(12345);
         executeTestWithRule(() -> {
             connectToServer(sftpServer);
-            assertThat(sftpServer.getPort()).isEqualTo(diffPort);
+            assertThat(sftpServer.getPort()).isEqualTo(12345);
         }, sftpServer);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void SFTP_server_port_expected_to_be_greater_than_zero() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule().withPort(-10);
+        executeTestWithRule(() -> connectToServer(sftpServer), sftpServer);
     }
 
     @Test

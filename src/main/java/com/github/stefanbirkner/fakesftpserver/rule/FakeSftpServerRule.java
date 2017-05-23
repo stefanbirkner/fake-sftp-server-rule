@@ -128,9 +128,12 @@ public class FakeSftpServerRule implements TestRule {
      * @return This SFTP Server instance
      */
     public FakeSftpServerRule withPort(int port) {
-        assert port >= 0;
-        this.port = port;
-        return this;
+        if (port < 0) {
+            throw new IllegalArgumentException("Port must be greater than or equal to 0");
+        }
+        final FakeSftpServerRule fakeSftpServerRule = new FakeSftpServerRule();
+        fakeSftpServerRule.port = port;
+        return fakeSftpServerRule;
     }
 
     /**

@@ -27,7 +27,7 @@ public class FakeSftpServerRuleTest {
     private static final byte[] DUMMY_CONTENT = new byte[]{1, 4, 2, 4, 2, 4};
     private static final InputStream DUMMY_STREAM = new ByteArrayInputStream(DUMMY_CONTENT);
     private static final JSch JSCH = new JSch();
-    private static final int TIMEOUT = 100;
+    private static final int TIMEOUT = 200;
 
     @Test
     public void SFTP_server_accepts_connections_with_password() {

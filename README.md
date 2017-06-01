@@ -19,7 +19,7 @@ Fake SFTP Server Rule is available from [Maven Central](http://search.maven.org/
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
 
 
@@ -40,8 +40,20 @@ This rule starts a server before your test and stops it afterwards.
 
 You can interact with the SFTP server by using the SFTP protocol with an
 arbitrary username and password. (The server accepts every combination of
-username and password.) The port of the server is obtained by
-`sftpServer.getPort()`.
+username and password.)
+
+The port of the server is obtained by `sftpServer.getPort()`. You can change it
+by calling `setPort(int)`. If you do this from within a test then the server
+gets restarted. Therefore I recommend to set the port immediately after
+creating the rule in order to avoid the time consuming restart.
+
+    public class TestClass {
+      @Rule
+      public final FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+          .setPort(1234);
+
+      ...
+    }
 
 ### Testing code that reads files
 

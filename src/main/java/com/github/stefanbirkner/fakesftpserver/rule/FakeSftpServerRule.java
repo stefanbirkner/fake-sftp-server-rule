@@ -35,8 +35,21 @@ import static java.util.Collections.singletonList;
  * <p>This rule starts a server before your test and stops it afterwards.
  * <p>You can interact with the SFTP server by using the SFTP protocol with an
  * arbitrary username and password. (The server accepts every combination of
- * username and password.) The port of the server is obtained by
- * {@link #getPort() sftpServer.getPort()}.
+ * username and password.)
+ * <p>The port of the server is obtained by
+ * {@link #getPort() sftpServer.getPort()}. You can change it by calling
+ * {@link #setPort(int)}. If you do this from within a test then the server gets
+ * restarted. Therefore it is recommended to set the port immediately after
+ * creating the rule in order to avoid the time consuming restart.
+ * <pre>
+ * public class TestClass {
+ *   &#064;Rule
+ *   public final FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+ *       .setPort(1234);
+ *
+ *   ...
+ * }
+ * </pre>
  *
  * <h2>Testing code that reads files</h2>
  * <p>If you test code that reads files from an SFTP server then you need the
@@ -111,9 +124,10 @@ import static java.util.Collections.singletonList;
  * <p>The method returns {@code true} iff the file exists and it is not a directory.
  */
 public class FakeSftpServerRule implements TestRule {
-    private static final int PORT = 23454;
+    private int port = 23454;
 
     private FileSystem fileSystem;
+    private SshServer server;
 
     /**
      * Returns the port of the SFTP server.
@@ -121,7 +135,39 @@ public class FakeSftpServerRule implements TestRule {
      * @return the port of the SFTP server.
      */
     public int getPort() {
-        return PORT;
+        return port;
+    }
+
+    /**
+     * Set the port of the SFTP server. The SFTP server gets restarted if you
+     * call {@code setPort} from within a test. It is recommended to set the
+     * port immediately after creating the rule in order to avoid the time
+     * consuming restart.
+     * @param port the port. Must be between 1 and 65535.
+     * @return the rule itself.
+     * @throws IllegalArgumentException if the port is not between 1 and 65535.
+     * @throws IllegalStateException if the server cannot be restarted.
+     */
+    public FakeSftpServerRule setPort(int port) {
+        if (port < 1 || port > 65535)
+            throw new IllegalArgumentException(
+                "Port cannot be set to " + port
+                    + " because only ports between 1 and 65535 are valid.");
+        this.port = port;
+        if (server != null)
+            restartServer();
+        return this;
+    }
+
+    private void restartServer() {
+        try {
+            server.stop();
+            server.setPort(port);
+            server.start();
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                "The SFTP server cannot be restarted.", e);
+        }
     }
 
     /**
@@ -231,6 +277,7 @@ public class FakeSftpServerRule implements TestRule {
                      SshServer server = startServer(fileSystem)) {
                     base.evaluate();
                 } finally {
+                    server = null;
                     fileSystem = null;
                 }
             }
@@ -244,7 +291,7 @@ public class FakeSftpServerRule implements TestRule {
 
     private SshServer startServer(FileSystem fileSystem) throws IOException {
         SshServer server = SshServer.setUpDefaultServer();
-        server.setPort(PORT);
+        server.setPort(port);
         server.setKeyPairProvider(new SimpleGeneratorHostKeyProvider());
         server.setPasswordAuthenticator(new StaticPasswordAuthenticator(true));
         server.setSubsystemFactories(singletonList(new SftpSubsystemFactory()));
@@ -254,6 +301,7 @@ public class FakeSftpServerRule implements TestRule {
          */
         server.setFileSystemFactory(session -> new DoNotClose(fileSystem));
         server.start();
+        this.server = server;
         return server;
     }
 

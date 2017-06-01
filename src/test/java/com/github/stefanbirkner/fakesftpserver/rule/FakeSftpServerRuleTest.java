@@ -19,12 +19,14 @@ import static com.github.stefanbirkner.fishbowl.Fishbowl.exceptionThrownBy;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.io.IOUtils.toByteArray;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /* Wording according to the draft:
  * http://tools.ietf.org/html/draft-ietf-secsh-filexfer-13
  */
 public class FakeSftpServerRuleTest {
     private static final byte[] DUMMY_CONTENT = new byte[]{1, 4, 2, 4, 2, 4};
+    private static final int DUMMY_PORT = 46354;
     private static final InputStream DUMMY_STREAM = new ByteArrayInputStream(DUMMY_CONTENT);
     private static final JSch JSCH = new JSch();
     private static final int TIMEOUT = 200;
@@ -376,6 +378,14 @@ public class FakeSftpServerRuleTest {
     }
 
     @Test
+    public void a_client_can_connect_to_the_server_at_a_user_specified_port() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule().setPort(8394);
+        executeTestWithRule(
+            () -> connectToServerAtPort(8394),
+            sftpServer);
+    }
+
+    @Test
     public void after_a_successful_test_SFTP_server_is_shutdown() {
         FakeSftpServerRule sftpServer = new FakeSftpServerRule();
         executeTestWithRule(() -> {
@@ -396,10 +406,61 @@ public class FakeSftpServerRuleTest {
         assertThat(exception).hasCauseInstanceOf(ConnectException.class);
     }
 
+    @Test
+    public void the_port_can_be_changed_during_the_test() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        executeTestWithRule(() -> {
+            sftpServer.setPort(DUMMY_PORT);
+            connectToServerAtPort(DUMMY_PORT);
+        }, sftpServer);
+    }
+
+    @Test
+    public void it_is_not_possible_to_set_a_negative_port() {
+        assertThatThrownBy(() -> new FakeSftpServerRule().setPort(-1) )
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Port cannot be set to -1 because only ports between 1 and 65535 are valid.");
+    }
+
+    @Test
+    public void it_is_not_possible_to_set_port_zero() {
+        assertThatThrownBy(() -> new FakeSftpServerRule().setPort(0) )
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Port cannot be set to 0 because only ports between 1 and 65535 are valid.");
+    }
+
+    @Test
+    public void port_can_be_set_to_1() {
+        //I don't test the connection, because port 1 can not be used by a
+        //standard user.
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+        sftpServer.setPort(1);
+    }
+
+    @Test
+    public void server_can_be_run_at_port_65535() {
+        FakeSftpServerRule sftpServer = new FakeSftpServerRule().setPort(65535);
+        executeTestWithRule(
+            () -> connectToServerAtPort(65535),
+            sftpServer);
+    }
+
+    @Test
+    public void it_is_not_possible_to_set_a_port_greater_than_65535() {
+        assertThatThrownBy(() -> new FakeSftpServerRule().setPort(65536) )
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Port cannot be set to 65536 because only ports between 1 and 65535 are valid.");
+    }
+
     private Session connectToServer(FakeSftpServerRule sftpServer)
         throws JSchException {
+        return connectToServerAtPort(sftpServer.getPort());
+    }
+
+    private Session connectToServerAtPort(int port)
+        throws JSchException {
         Session session = JSCH.getSession(
-            "dummy user", "127.0.0.1", sftpServer.getPort());
+            "dummy user", "127.0.0.1", port);
         session.setConfig("StrictHostKeyChecking", "no");
         session.setPassword("dummy password");
         session.connect(TIMEOUT);

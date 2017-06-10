@@ -194,9 +194,7 @@ public class FakeSftpServerRule implements TestRule {
     public void putFile(String path, byte[] content) throws IOException {
         verifyThatTestIsRunning("upload file");
         Path pathAsObject = fileSystem.getPath(path);
-        Path directory = pathAsObject.getParent();
-        if (directory != null && !directory.equals(pathAsObject.getRoot()))
-            createDirectories(directory);
+        ensureDirectoryOfPathExists(pathAsObject);
         write(pathAsObject, content);
     }
 
@@ -211,9 +209,7 @@ public class FakeSftpServerRule implements TestRule {
     public void putFile(String path, InputStream is) throws IOException {
         verifyThatTestIsRunning("upload file");
         Path pathAsObject = fileSystem.getPath(path);
-        Path directory = pathAsObject.getParent();
-        if (directory != null && !directory.equals(pathAsObject.getRoot()))
-            createDirectories(directory);
+        ensureDirectoryOfPathExists(pathAsObject);
         copy(is, pathAsObject);
     }
 
@@ -303,6 +299,12 @@ public class FakeSftpServerRule implements TestRule {
         server.start();
         this.server = server;
         return server;
+    }
+
+    private void ensureDirectoryOfPathExists(Path path) throws IOException {
+        Path directory = path.getParent();
+        if (directory != null && !directory.equals(path.getRoot()))
+            createDirectories(directory);
     }
 
     private void verifyThatTestIsRunning(String mode) {

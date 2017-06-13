@@ -111,9 +111,30 @@ import static java.util.Collections.singletonList;
  * <p>The method returns {@code true} iff the file exists and it is not a directory.
  */
 public class FakeSftpServerRule implements TestRule {
-    private static final int PORT = 23454;
+    private static final int DEFAULT_PORT = 23454;
 
     private FileSystem fileSystem;
+    private int port;
+    private int assignedPort;
+
+    public FakeSftpServerRule() {
+        this.port = DEFAULT_PORT;
+    }
+
+    /**
+     * Change the port of the SFTP server.
+     *
+     * @param port Port of the SFTP server
+     * @return This SFTP Server instance
+     */
+    public FakeSftpServerRule withPort(int port) {
+        if (port < 0) {
+            throw new IllegalArgumentException("Port must be greater than or equal to 0");
+        }
+        final FakeSftpServerRule fakeSftpServerRule = new FakeSftpServerRule();
+        fakeSftpServerRule.port = port;
+        return fakeSftpServerRule;
+    }
 
     /**
      * Returns the port of the SFTP server.
@@ -121,7 +142,7 @@ public class FakeSftpServerRule implements TestRule {
      * @return the port of the SFTP server.
      */
     public int getPort() {
-        return PORT;
+        return this.port == 0 ? this.assignedPort : this.port;
     }
 
     /**
@@ -244,7 +265,7 @@ public class FakeSftpServerRule implements TestRule {
 
     private SshServer startServer(FileSystem fileSystem) throws IOException {
         SshServer server = SshServer.setUpDefaultServer();
-        server.setPort(PORT);
+        server.setPort(port);
         server.setKeyPairProvider(new SimpleGeneratorHostKeyProvider());
         server.setPasswordAuthenticator(new StaticPasswordAuthenticator(true));
         server.setSubsystemFactories(singletonList(new SftpSubsystemFactory()));
@@ -254,6 +275,9 @@ public class FakeSftpServerRule implements TestRule {
          */
         server.setFileSystemFactory(session -> new DoNotClose(fileSystem));
         server.start();
+        if (this.port == 0) {
+            this.assignedPort = server.getPort();
+        }
         return server;
     }
 

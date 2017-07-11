@@ -148,11 +148,14 @@ public class FakeSftpServerRule implements TestRule {
      * @throws IllegalArgumentException if the port is not between 1 and 65535.
      * @throws IllegalStateException if the server cannot be restarted.
      */
-    public FakeSftpServerRule setPort(int port) {
+    public FakeSftpServerRule setPort(
+        int port
+    ) {
         if (port < 1 || port > 65535)
             throw new IllegalArgumentException(
                 "Port cannot be set to " + port
-                    + " because only ports between 1 and 65535 are valid.");
+                    + " because only ports between 1 and 65535 are valid."
+            );
         this.port = port;
         if (server != null)
             restartServer();
@@ -166,7 +169,9 @@ public class FakeSftpServerRule implements TestRule {
             server.start();
         } catch (IOException e) {
             throw new IllegalStateException(
-                "The SFTP server cannot be restarted.", e);
+                "The SFTP server cannot be restarted.",
+                e
+            );
         }
     }
 
@@ -178,8 +183,11 @@ public class FakeSftpServerRule implements TestRule {
      * @param encoding the encoding of the file.
      * @throws IOException if the file cannot be written.
      */
-    public void putFile(String path, String content, Charset encoding)
-            throws IOException {
+    public void putFile(
+        String path,
+        String content,
+        Charset encoding
+    ) throws IOException {
         byte[] contentAsBytes = content.getBytes(encoding);
         putFile(path, contentAsBytes);
     }
@@ -191,7 +199,10 @@ public class FakeSftpServerRule implements TestRule {
      * @param content the files content.
      * @throws IOException if the file cannot be written.
      */
-    public void putFile(String path, byte[] content) throws IOException {
+    public void putFile(
+        String path,
+        byte[] content
+    ) throws IOException {
         verifyThatTestIsRunning("upload file");
         Path pathAsObject = fileSystem.getPath(path);
         ensureDirectoryOfPathExists(pathAsObject);
@@ -206,7 +217,10 @@ public class FakeSftpServerRule implements TestRule {
      * @throws IOException if the file cannot be written or the input stream
      * cannot be read.
      */
-    public void putFile(String path, InputStream is) throws IOException {
+    public void putFile(
+        String path,
+        InputStream is
+    ) throws IOException {
         verifyThatTestIsRunning("upload file");
         Path pathAsObject = fileSystem.getPath(path);
         ensureDirectoryOfPathExists(pathAsObject);
@@ -218,7 +232,9 @@ public class FakeSftpServerRule implements TestRule {
      * @param path the directory's path.
      * @throws IOException if the directory cannot be created.
      */
-    public void createDirectory(String path) throws IOException {
+    public void createDirectory(
+        String path
+    ) throws IOException {
         verifyThatTestIsRunning("create directory");
         Path pathAsObject = fileSystem.getPath(path);
         createDirectories(pathAsObject);
@@ -233,7 +249,10 @@ public class FakeSftpServerRule implements TestRule {
      * @throws IOException if the file cannot be read.
      * @throws IllegalStateException if not called from within a test.
      */
-    public String getFileContent(String path, Charset encoding) throws IOException {
+    public String getFileContent(
+        String path,
+        Charset encoding
+    ) throws IOException {
         byte[] content = getFileContent(path);
         return new String(content, encoding);
     }
@@ -245,7 +264,9 @@ public class FakeSftpServerRule implements TestRule {
      * @throws IOException if the file cannot be read.
      * @throws IllegalStateException if not called from within a test.
      */
-    public byte[] getFileContent(String path) throws IOException {
+    public byte[] getFileContent(
+        String path
+    ) throws IOException {
         verifyThatTestIsRunning("download file");
         Path pathAsObject = fileSystem.getPath(path);
         return readAllBytes(pathAsObject);
@@ -258,19 +279,26 @@ public class FakeSftpServerRule implements TestRule {
      * @return {@code true} iff the file exists and it is not a directory.
      * @throws IllegalStateException if not called from within a test.
      */
-    public boolean existsFile(String path) {
+    public boolean existsFile(
+        String path
+    ) {
         verifyThatTestIsRunning("check existence of file");
         Path pathAsObject = fileSystem.getPath(path);
         return exists(pathAsObject) && !isDirectory(pathAsObject);
     }
 
     @Override
-    public Statement apply(Statement base, Description description) {
+    public Statement apply(
+        Statement base,
+        Description description
+    ) {
         return new Statement() {
             @Override
             public void evaluate() throws Throwable {
-                try (FileSystem fileSystem = createFileSystem();
-                     SshServer server = startServer(fileSystem)) {
+                try (
+                    FileSystem fileSystem = createFileSystem();
+                    SshServer server = startServer(fileSystem)
+                ) {
                     base.evaluate();
                 } finally {
                     server = null;
@@ -280,12 +308,15 @@ public class FakeSftpServerRule implements TestRule {
         };
     }
 
-    private FileSystem createFileSystem() throws IOException {
+    private FileSystem createFileSystem(
+    ) throws IOException {
         fileSystem = newLinux().build("FakeSftpServerRule@" + hashCode());
         return fileSystem;
     }
 
-    private SshServer startServer(FileSystem fileSystem) throws IOException {
+    private SshServer startServer(
+        FileSystem fileSystem
+    ) throws IOException {
         SshServer server = SshServer.setUpDefaultServer();
         server.setPort(port);
         server.setKeyPairProvider(new SimpleGeneratorHostKeyProvider());
@@ -301,22 +332,30 @@ public class FakeSftpServerRule implements TestRule {
         return server;
     }
 
-    private void ensureDirectoryOfPathExists(Path path) throws IOException {
+    private void ensureDirectoryOfPathExists(
+        Path path
+    ) throws IOException {
         Path directory = path.getParent();
         if (directory != null && !directory.equals(path.getRoot()))
             createDirectories(directory);
     }
 
-    private void verifyThatTestIsRunning(String mode) {
+    private void verifyThatTestIsRunning(
+        String mode
+    ) {
         if (fileSystem == null)
-            throw new IllegalStateException("Failed to " + mode + " because"
-                + " test has not been started or is already finished.");
+            throw new IllegalStateException(
+                "Failed to " + mode + " because test has not been started or"
+                    + " is already finished."
+            );
     }
 
     private static class DoNotClose extends FileSystem {
         final FileSystem fileSystem;
 
-        DoNotClose(FileSystem fileSystem) {
+        DoNotClose(
+            FileSystem fileSystem
+        ) {
             this.fileSystem = fileSystem;
         }
 
@@ -326,7 +365,8 @@ public class FakeSftpServerRule implements TestRule {
         }
 
         @Override
-        public void close() throws IOException {
+        public void close(
+        ) throws IOException {
             //will not be closed
         }
 
@@ -361,12 +401,17 @@ public class FakeSftpServerRule implements TestRule {
         }
 
         @Override
-        public Path getPath(String first, String... more) {
+        public Path getPath(
+            String first,
+            String... more
+        ) {
             return fileSystem.getPath(first, more);
         }
 
         @Override
-        public PathMatcher getPathMatcher(String syntaxAndPattern) {
+        public PathMatcher getPathMatcher(
+            String syntaxAndPattern
+        ) {
             return fileSystem.getPathMatcher(syntaxAndPattern);
         }
 

@@ -572,10 +572,7 @@ public class FakeSftpServerRuleTest {
                 () -> {},
                 sftpServer
             );
-            Throwable exception = exceptionThrownBy(
-                () -> connectToServer(sftpServer)
-            );
-            assertThat(exception).hasCauseInstanceOf(ConnectException.class);
+            assertConnectionToSftpServerNotPossible(sftpServer);
         }
 
         @Test
@@ -587,10 +584,14 @@ public class FakeSftpServerRuleTest {
                 },
                 sftpServer
             );
-            Throwable exception = exceptionThrownBy(
-                () -> connectToServer(sftpServer)
-            );
-            assertThat(exception).hasCauseInstanceOf(ConnectException.class);
+            assertConnectionToSftpServerNotPossible(sftpServer);
+        }
+
+        private void assertConnectionToSftpServerNotPossible(
+            FakeSftpServerRule sftpServer
+        ) {
+            assertThatThrownBy(() -> connectToServer(sftpServer))
+                .hasCauseInstanceOf(ConnectException.class);
         }
     }
 

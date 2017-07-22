@@ -14,6 +14,7 @@ import java.net.ConnectException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestThatThrowsExceptionWithRule;
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestWithRule;
@@ -654,6 +655,40 @@ public class FakeSftpServerRuleTest {
                     "Port cannot be set to 65536 because only ports between 1"
                         + " and 65535 are valid."
                 );
+        }
+    }
+
+    public static class port_query {
+        @Test
+        public void port_can_be_read_before_the_test() {
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                .setPort(DUMMY_PORT);
+            int port = sftpServer.getPort();
+            assertThat(port).isEqualTo(DUMMY_PORT);
+        }
+
+        @Test
+        public void port_can_be_read_during_the_test() {
+            AtomicInteger portCapture = new AtomicInteger();
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                .setPort(DUMMY_PORT);
+            executeTestWithRule(
+                () -> portCapture.set(sftpServer.getPort()),
+                sftpServer
+            );
+            assertThat(portCapture).hasValue(DUMMY_PORT);
+        }
+
+        @Test
+        public void port_can_be_read_after_the_test() {
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                .setPort(DUMMY_PORT);
+            executeTestWithRule(
+                () -> {},
+                sftpServer
+            );
+            int port = sftpServer.getPort();
+            assertThat(port).isEqualTo(DUMMY_PORT);
         }
     }
 

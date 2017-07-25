@@ -11,6 +11,8 @@ Fake SFTP Server Rule is published under the
 [open an issue](https://github.com/stefanbirkner/fake-sftp-server-rule/issues/new)
 if you want to use it with an older version of Java.
 
+I want to thank my former team SAM at ThoughtWorks for using this library.
+
 
 ## Installation
 

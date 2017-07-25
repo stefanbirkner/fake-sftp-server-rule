@@ -782,24 +782,26 @@ public class FakeSftpServerRuleTest {
     public static class server_shutdown {
         @Test
         public void after_a_successful_test_SFTP_server_is_shutdown() {
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                .setPort(DUMMY_PORT);
             executeTestWithRule(
                 () -> {},
                 sftpServer
             );
-            assertConnectionToSftpServerNotPossible(sftpServer);
+            assertConnectionToSftpServerNotPossible(DUMMY_PORT);
         }
 
         @Test
         public void after_an_erroneous_test_SFTP_server_is_shutdown() {
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                .setPort(DUMMY_PORT);
             executeTestThatThrowsExceptionWithRule(
                 () -> {
                     throw new RuntimeException();
                 },
                 sftpServer
             );
-            assertConnectionToSftpServerNotPossible(sftpServer);
+            assertConnectionToSftpServerNotPossible(DUMMY_PORT);
         }
 
         @Test
@@ -824,12 +826,6 @@ public class FakeSftpServerRuleTest {
         }
 
         private void assertConnectionToSftpServerNotPossible(
-            FakeSftpServerRule sftpServer
-        ) {
-            assertConnectionToSftpServerNotPossible(sftpServer.getPort());
-        }
-
-        private void assertConnectionToSftpServerNotPossible(
             int port
         ) {
             Throwable throwable = catchThrowable(
@@ -845,6 +841,26 @@ public class FakeSftpServerRuleTest {
     }
 
     public static class port_selection {
+        @Test
+        public void by_default_two_rules_run_servers_at_different_ports() {
+            FakeSftpServerRule firstSftpServer = new FakeSftpServerRule();
+            AtomicInteger portCaptureForFirstServer = new AtomicInteger();
+            FakeSftpServerRule secondSftpServer = new FakeSftpServerRule();
+            AtomicInteger portCaptureForSecondServer = new AtomicInteger();
+
+            executeTestWithRule(
+                () -> portCaptureForFirstServer.set(firstSftpServer.getPort()),
+                firstSftpServer
+            );
+            executeTestWithRule(
+                () -> portCaptureForSecondServer.set(secondSftpServer.getPort()),
+                secondSftpServer
+            );
+
+            assertThat(portCaptureForFirstServer)
+                .doesNotHaveValue(portCaptureForSecondServer.get());
+        }
+
         @Test
         public void the_port_can_be_changed_during_the_test() {
             FakeSftpServerRule sftpServer = new FakeSftpServerRule();
@@ -906,37 +922,79 @@ public class FakeSftpServerRuleTest {
         }
     }
 
+    @RunWith(Enclosed.class)
     public static class port_query {
-        @Test
-        public void port_can_be_read_before_the_test() {
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
-                .setPort(DUMMY_PORT);
-            int port = sftpServer.getPort();
-            assertThat(port).isEqualTo(DUMMY_PORT);
+
+        public static class random_port {
+            @Test
+            public void cannot_be_read_before_the_test() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                assertPortCannotBeRead(sftpServer);
+            }
+
+            @Test
+            public void can_be_read_during_the_test() {
+                AtomicInteger portCapture = new AtomicInteger();
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> portCapture.set(sftpServer.getPort()),
+                    sftpServer
+                );
+                assertThat(portCapture).doesNotHaveValue(0);
+            }
+
+            @Test
+            public void cannot_be_read_after_the_test() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {},
+                    sftpServer
+                );
+                assertPortCannotBeRead(sftpServer);
+            }
+
+            private void assertPortCannotBeRead(FakeSftpServerRule sftpServer) {
+                assertThatThrownBy(sftpServer::getPort)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage(
+                        "Failed to call getPort() because test has not been"
+                            + " started or is already finished."
+                    );
+            }
         }
 
-        @Test
-        public void port_can_be_read_during_the_test() {
-            AtomicInteger portCapture = new AtomicInteger();
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
-                .setPort(DUMMY_PORT);
-            executeTestWithRule(
-                () -> portCapture.set(sftpServer.getPort()),
-                sftpServer
-            );
-            assertThat(portCapture).hasValue(DUMMY_PORT);
-        }
+        public static class specified_port {
+            @Test
+            public void can_be_read_before_the_test() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .setPort(DUMMY_PORT);
+                int port = sftpServer.getPort();
+                assertThat(port).isEqualTo(DUMMY_PORT);
+            }
 
-        @Test
-        public void port_can_be_read_after_the_test() {
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
-                .setPort(DUMMY_PORT);
-            executeTestWithRule(
-                () -> {},
-                sftpServer
-            );
-            int port = sftpServer.getPort();
-            assertThat(port).isEqualTo(DUMMY_PORT);
+            @Test
+            public void can_be_read_during_the_test() {
+                AtomicInteger portCapture = new AtomicInteger();
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .setPort(DUMMY_PORT);
+                executeTestWithRule(
+                    () -> portCapture.set(sftpServer.getPort()),
+                    sftpServer
+                );
+                assertThat(portCapture).hasValue(DUMMY_PORT);
+            }
+
+            @Test
+            public void can_be_read_after_the_test() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .setPort(DUMMY_PORT);
+                executeTestWithRule(
+                    () -> {},
+                    sftpServer
+                );
+                int port = sftpServer.getPort();
+                assertThat(port).isEqualTo(DUMMY_PORT);
+            }
         }
     }
 

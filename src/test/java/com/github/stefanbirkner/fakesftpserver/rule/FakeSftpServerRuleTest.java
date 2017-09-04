@@ -23,6 +23,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.io.IOUtils.toByteArray;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 /* Wording according to the draft:
  * http://tools.ietf.org/html/draft-ietf-secsh-filexfer-13
@@ -591,7 +592,14 @@ public class FakeSftpServerRuleTest {
         private void assertConnectionToSftpServerNotPossible(
             FakeSftpServerRule sftpServer
         ) {
-            assertThatThrownBy(() -> connectToServer(sftpServer))
+            Throwable throwable = catchThrowable(
+                () -> connectToServer(sftpServer)
+            );
+            assertThat(throwable)
+                .withFailMessage(
+                    "SFTP server is still running on port %d.",
+                    sftpServer.getPort()
+                )
                 .hasCauseInstanceOf(ConnectException.class);
         }
     }

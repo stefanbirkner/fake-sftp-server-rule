@@ -589,16 +589,43 @@ public class FakeSftpServerRuleTest {
             assertConnectionToSftpServerNotPossible(sftpServer);
         }
 
+        @Test
+        public void after_a_test_first_SFTP_server_is_shutdown_when_port_was_changed_during_test() {
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                .setPort(DUMMY_PORT - 1);
+            executeTestWithRule(
+                () -> sftpServer.setPort(DUMMY_PORT),
+                sftpServer
+            );
+            assertConnectionToSftpServerNotPossible(DUMMY_PORT - 1);
+        }
+
+        @Test
+        public void after_a_test_second_SFTP_server_is_shutdown_when_port_was_changed_during_test() {
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+            executeTestWithRule(
+                () -> sftpServer.setPort(DUMMY_PORT),
+                sftpServer
+            );
+            assertConnectionToSftpServerNotPossible(DUMMY_PORT);
+        }
+
         private void assertConnectionToSftpServerNotPossible(
             FakeSftpServerRule sftpServer
         ) {
+            assertConnectionToSftpServerNotPossible(sftpServer.getPort());
+        }
+
+        private void assertConnectionToSftpServerNotPossible(
+            int port
+        ) {
             Throwable throwable = catchThrowable(
-                () -> connectToServer(sftpServer)
+                () -> connectToServerAtPort(port)
             );
             assertThat(throwable)
                 .withFailMessage(
                     "SFTP server is still running on port %d.",
-                    sftpServer.getPort()
+                    port
                 )
                 .hasCauseInstanceOf(ConnectException.class);
         }

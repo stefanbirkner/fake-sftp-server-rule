@@ -165,8 +165,7 @@ public class FakeSftpServerRule implements TestRule {
     private void restartServer() {
         try {
             server.stop();
-            server.setPort(port);
-            server.start();
+            startServer(fileSystem);
         } catch (IOException e) {
             throw new IllegalStateException(
                 "The SFTP server cannot be restarted.",
@@ -296,12 +295,16 @@ public class FakeSftpServerRule implements TestRule {
             @Override
             public void evaluate() throws Throwable {
                 try (
-                    FileSystem fileSystem = createFileSystem();
-                    SshServer server = startServer(fileSystem)
+                    FileSystem fileSystem = createFileSystem()
                 ) {
-                    base.evaluate();
+                    startServer(fileSystem);
+                    try {
+                        base.evaluate();
+                    } finally {
+                        server.stop();
+                        server = null;
+                    }
                 } finally {
-                    server = null;
                     fileSystem = null;
                 }
             }

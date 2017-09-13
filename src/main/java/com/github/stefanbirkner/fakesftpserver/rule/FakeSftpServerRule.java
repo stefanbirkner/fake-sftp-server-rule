@@ -39,8 +39,8 @@ import static java.util.Collections.singletonList;
  * <p>The port of the server is obtained by
  * {@link #getPort() sftpServer.getPort()}. You can change it by calling
  * {@link #setPort(int)}. If you do this from within a test then the server gets
- * restarted. Therefore it is recommended to set the port immediately after
- * creating the rule in order to avoid the time consuming restart.
+ * restarted. The time-consuming restart can be avoided by setting the port
+ * immediately after creating the rule.
  * <pre>
  * public class TestClass {
  *   &#064;Rule
@@ -140,9 +140,8 @@ public class FakeSftpServerRule implements TestRule {
 
     /**
      * Set the port of the SFTP server. The SFTP server gets restarted if you
-     * call {@code setPort} from within a test. It is recommended to set the
-     * port immediately after creating the rule in order to avoid the time
-     * consuming restart.
+     * call {@code setPort} from within a test. The time-consuming restart can
+     * be avoided by setting the port immediately after creating the rule.
      * @param port the port. Must be between 1 and 65535.
      * @return the rule itself.
      * @throws IllegalArgumentException if the port is not between 1 and 65535.

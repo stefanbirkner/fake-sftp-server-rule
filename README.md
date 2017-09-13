@@ -46,8 +46,8 @@ username and password.)
 
 The port of the server is obtained by `sftpServer.getPort()`. You can change it
 by calling `setPort(int)`. If you do this from within a test then the server
-gets restarted. Therefore I recommend to set the port immediately after
-creating the rule in order to avoid the time consuming restart.
+gets restarted. The time-consuming restart can be avoided by setting the port
+immediately after creating the rule.
 
     public class TestClass {
       @Rule

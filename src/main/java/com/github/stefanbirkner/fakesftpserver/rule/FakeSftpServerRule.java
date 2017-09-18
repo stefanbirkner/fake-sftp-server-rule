@@ -89,7 +89,18 @@ import static java.util.Collections.singletonList;
  *   //code that reads from or writes to that directory
  * }
  * </pre>
- *
+ * <p>You may create multiple directories at once with
+ * {@link #createDirectories(String...)}.
+ * <pre>
+ * &#064;Test
+ * public void testDirectories() {
+ *   sftpServer.{@link #createDirectories(String...) createDirectories}(
+ *     "/a/directory",
+ *     "/another/directory"
+ *   );
+ *   //code that reads from or writes to that directories
+ * }
+ * </pre>
  * <h2>Testing code that writes files</h2>
  * <p>If you test code that writes files to an SFTP server then you need to
  * verify the upload. Fake SFTP Server Rule provides a shortcut for getting the
@@ -235,7 +246,19 @@ public class FakeSftpServerRule implements TestRule {
     ) throws IOException {
         verifyThatTestIsRunning("create directory");
         Path pathAsObject = fileSystem.getPath(path);
-        createDirectories(pathAsObject);
+        Files.createDirectories(pathAsObject);
+    }
+
+    /**
+     * Create multiple directories on the SFTP server.
+     * @param paths the directories' paths.
+     * @throws IOException if at least one directory cannot be created.
+     */
+    public void createDirectories(
+        String... paths
+    ) throws IOException {
+        for (String path: paths)
+            createDirectory(path);
     }
 
     /**
@@ -339,7 +362,7 @@ public class FakeSftpServerRule implements TestRule {
     ) throws IOException {
         Path directory = path.getParent();
         if (directory != null && !directory.equals(path.getRoot()))
-            createDirectories(directory);
+            Files.createDirectories(directory);
     }
 
     private void verifyThatTestIsRunning(

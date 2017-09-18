@@ -305,49 +305,109 @@ public class FakeSftpServerRuleTest {
         }
     }
 
+    @RunWith(Enclosed.class)
     public static class directory_creation {
-        @Test
-        public void a_directory_that_is_created_with_the_rule_can_be_read_by_a_client() {
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
-            executeTestWithRule(
-                () -> {
-                    sftpServer.createDirectory("/a/directory");
-                    assertEmptyDirectory(sftpServer, "/a/directory");
-                },
-                sftpServer
-            );
+
+        public static class a_single_directory {
+            @Test
+            public void that_is_created_with_the_rule_can_be_read_by_a_client() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {
+                        sftpServer.createDirectory("/a/directory");
+                        assertEmptyDirectory(sftpServer, "/a/directory");
+                    },
+                    sftpServer
+                );
+            }
+
+            @Test
+            public void cannot_be_created_before_the_test_is_started() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                Throwable exception = exceptionThrownBy(
+                    () -> sftpServer.createDirectory("/a/directory")
+                );
+                assertThat(exception)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage(
+                        "Failed to create directory because test has not been"
+                            + " started or is already finished."
+                    );
+            }
+
+            @Test
+            public void cannot_be_created_after_the_test_is_finished() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {},
+                    sftpServer
+                );
+                Throwable exception = exceptionThrownBy(
+                    () -> sftpServer.createDirectory("/a/directory")
+                );
+                assertThat(exception)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage(
+                        "Failed to create directory because test has not been"
+                            + " started or is already finished."
+                    );
+            }
         }
 
-        @Test
-        public void a_directory_cannot_be_created_before_the_test_is_started() {
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
-            Throwable exception = exceptionThrownBy(
-                () -> sftpServer.createDirectory("/a/directory")
-            );
-            assertThat(exception)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage(
-                    "Failed to create directory because test has not been"
-                        + " started or is already finished."
+        public static class multiple_directories {
+            @Test
+            public void that_are_created_with_the_rule_can_be_read_by_a_client() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {
+                        sftpServer.createDirectories(
+                            "/a/directory",
+                            "/another/directory"
+                        );
+                        assertEmptyDirectory(sftpServer, "/a/directory");
+                        assertEmptyDirectory(sftpServer, "/another/directory");
+                    },
+                    sftpServer
                 );
-        }
+            }
 
-        @Test
-        public void a_directory_cannot_be_created_after_the_test_is_finished() {
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
-            executeTestWithRule(
-                () -> {},
-                sftpServer
-            );
-            Throwable exception = exceptionThrownBy(
-                () -> sftpServer.createDirectory("/a/directory")
-            );
-            assertThat(exception)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage(
-                    "Failed to create directory because test has not been"
-                        + " started or is already finished."
+            @Test
+            public void cannot_be_created_before_the_test_is_started() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                Throwable exception = exceptionThrownBy(
+                    () -> sftpServer.createDirectories(
+                        "/a/directory",
+                        "/another/directory"
+                    )
                 );
+                assertThat(exception)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage(
+                        "Failed to create directory because test has not been"
+                            + " started or is already finished."
+                    );
+            }
+
+            @Test
+            public void cannot_be_created_after_the_test_is_finished() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {},
+                    sftpServer
+                );
+                Throwable exception = exceptionThrownBy(
+                    () -> sftpServer.createDirectories(
+                        "/a/directory",
+                        "/another/directory"
+                    )
+                );
+                assertThat(exception)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage(
+                        "Failed to create directory because test has not been"
+                            + " started or is already finished."
+                    );
+            }
         }
 
         private static void assertEmptyDirectory(

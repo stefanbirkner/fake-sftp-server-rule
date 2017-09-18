@@ -21,7 +21,7 @@ Fake SFTP Server Rule is available from [Maven Central](http://search.maven.org/
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>1.1.1</version>
+      <version>1.2.0</version>
     </dependency>
 
 
@@ -93,6 +93,17 @@ If you need an empty directory then you can use the method
     public void testTextFile() {
       sftpServer.createDirectory("/a/directory");
       //code that reads from or writes to that directory
+    }
+
+You may create multiple directories at once with `createDirectories(String...)`.
+
+    @Test
+    public void testDirectories() {
+      sftpServer.createDirectories(
+        "/a/directory",
+        "/another/directory"
+      );
+      //code that reads from or writes to that directories
     }
 
 

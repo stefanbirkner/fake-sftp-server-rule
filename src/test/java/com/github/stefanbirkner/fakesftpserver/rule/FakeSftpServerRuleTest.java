@@ -312,12 +312,7 @@ public class FakeSftpServerRuleTest {
             executeTestWithRule(
                 () -> {
                     sftpServer.createDirectory("/a/directory");
-                    Session session = connectToServer(sftpServer);
-                    ChannelSftp channel = connectSftpChannel(session);
-                    Vector entries = channel.ls("/a/directory");
-                    assertThat(entries).hasSize(2); //these are the entries . and ..
-                    channel.disconnect();
-                    session.disconnect();
+                    assertEmptyDirectory(sftpServer, "/a/directory");
                 },
                 sftpServer
             );
@@ -353,6 +348,18 @@ public class FakeSftpServerRuleTest {
                     "Failed to create directory because test has not been"
                         + " started or is already finished."
                 );
+        }
+
+        private static void assertEmptyDirectory(
+            FakeSftpServerRule sftpServer,
+            String directory
+        ) throws JSchException, SftpException {
+            Session session = connectToServer(sftpServer);
+            ChannelSftp channel = connectSftpChannel(session);
+            Vector entries = channel.ls(directory);
+            assertThat(entries).hasSize(2); //these are the entries . and ..
+            channel.disconnect();
+            session.disconnect();
         }
     }
 

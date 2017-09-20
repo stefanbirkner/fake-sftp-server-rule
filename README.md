@@ -90,7 +90,7 @@ If you need an empty directory then you can use the method
 `createDirectory(String)`.
 
     @Test
-    public void testTextFile() {
+    public void testDirectory() {
       sftpServer.createDirectory("/a/directory");
       //code that reads from or writes to that directory
     }

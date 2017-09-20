@@ -84,7 +84,7 @@ import static java.util.Collections.singletonList;
  * {@link #createDirectory(String)}.
  * <pre>
  * &#064;Test
- * public void testTextFile() {
+ * public void testDirectory() {
  *   sftpServer.{@link #createDirectory(String) createDirectory}("/a/directory");
  *   //code that reads from or writes to that directory
  * }

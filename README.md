@@ -11,7 +11,8 @@ Fake SFTP Server Rule is published under the
 [open an issue](https://github.com/stefanbirkner/fake-sftp-server-rule/issues/new)
 if you want to use it with an older version of Java.
 
-I want to thank my former team SAM at ThoughtWorks for using this library.
+I want to thank my former team SAM at ThoughtWorks for using this library and
+@OArtyomov for his feature request.
 
 
 ## Installation
@@ -22,7 +23,7 @@ Fake SFTP Server Rule is available from
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>1.2.0</version>
+      <version>1.3.0</version>
     </dependency>
 
 
@@ -142,6 +143,13 @@ verify that it exists or not.
 
 The method returns `true` iff the file exists and it is not a directory.
 
+### Delete all files
+
+If you want to reuse the SFTP server then you can delete all files and
+directories on the SFTP server. (This is rarely necessary because the rule
+itself takes care that every test starts and ends with a clean SFTP server.)
+
+    sftpServer.deleteAllFilesAndDirectories()
 
 ## Contributing
 

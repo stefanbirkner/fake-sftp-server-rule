@@ -794,6 +794,98 @@ public class FakeSftpServerRuleTest {
         }
     }
 
+    public static class cleanup {
+
+        @Test
+        public void deletes_file_in_root_directory() {
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+            executeTestWithRule(
+                () -> {
+                    uploadFile(
+                        sftpServer,
+                        "/dummy_file.bin",
+                        DUMMY_CONTENT
+                    );
+                    sftpServer.deleteAllFilesAndDirectories();
+                    assertFileDoesNotExist(
+                        sftpServer,
+                        "/dummy_file.bin"
+                    );
+                },
+                sftpServer
+            );
+        }
+
+        @Test
+        public void deletes_file_in_directory() {
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+            executeTestWithRule(
+                () -> {
+                    uploadFile(
+                        sftpServer,
+                        "/dummy_directory/dummy_file.bin",
+                        DUMMY_CONTENT
+                    );
+                    sftpServer.deleteAllFilesAndDirectories();
+                    assertFileDoesNotExist(
+                        sftpServer,
+                        "/dummy_directory/dummy_file.bin"
+                    );
+                },
+                sftpServer
+            );
+        }
+
+        @Test
+        public void deletes_directory() {
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+            executeTestWithRule(
+                () -> {
+                    sftpServer.createDirectory("dummy_directory");
+                    sftpServer.deleteAllFilesAndDirectories();
+                    assertDirectoryDoesNotExist(
+                        sftpServer,
+                        "/dummy_directory"
+                    );
+                },
+                sftpServer
+            );
+        }
+
+        @Test
+        public void works_on_an_empty_filesystem() {
+            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+            executeTestWithRule(
+                sftpServer::deleteAllFilesAndDirectories,
+                sftpServer
+            );
+        }
+
+        private static void assertFileDoesNotExist(
+            FakeSftpServerRule sftpServer,
+            String path
+        ) {
+            boolean exists = sftpServer.existsFile(path);
+            assertThat(exists).isFalse();
+        }
+
+        private static void assertDirectoryDoesNotExist(
+            FakeSftpServerRule sftpServer,
+            String directory
+        ) throws JSchException {
+            Session session = connectToServer(sftpServer);
+            ChannelSftp channel = connectSftpChannel(session);
+            try {
+                assertThatThrownBy(() -> channel.ls(directory))
+                    .isInstanceOf(SftpException.class)
+                    .hasMessage("Internal FileNotFoundException: " + directory);
+            } finally {
+                channel.disconnect();
+                session.disconnect();
+            }
+        }
+    }
+
     private static Session connectToServer(
         FakeSftpServerRule sftpServer
     ) throws JSchException {
@@ -852,7 +944,8 @@ public class FakeSftpServerRuleTest {
         ChannelSftp channel = connectSftpChannel(session);
         try {
             Path path = Paths.get(pathAsString);
-            channel.mkdir(path.getParent().toString());
+            if (!path.getParent().equals(path.getRoot()))
+                channel.mkdir(path.getParent().toString());
             channel.put(new ByteArrayInputStream(content), pathAsString);
         } finally {
             channel.disconnect();

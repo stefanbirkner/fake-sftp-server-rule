@@ -12,11 +12,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Set;
 
 import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
+import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.nio.file.Files.*;
 import static java.util.Collections.singletonList;
 
@@ -133,8 +135,25 @@ import static java.util.Collections.singletonList;
  * }
  * </pre>
  * <p>The method returns {@code true} iff the file exists and it is not a directory.
+ *
+ * <h2>Delete all files</h2>
+ * <p>If you want to reuse the SFTP server then you can delete all files and
+ * directories on the SFTP server. (This is rarely necessary because the rule
+ * itself takes care that every test starts and ends with a clean SFTP server.)
+ * <pre>{@link #deleteAllFilesAndDirectories() sftpServer.deleteAllFilesAndDirectories()};</pre>
  */
 public class FakeSftpServerRule implements TestRule {
+    private static final SimpleFileVisitor<Path> DELETE_FILES_AND_DIRECTORIES
+        = new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(
+                Path file,
+                BasicFileAttributes attrs
+            ) throws IOException {
+                delete(file);
+                return CONTINUE;
+            }
+        };
     private int port = 23454;
 
     private FileSystem fileSystem;
@@ -306,6 +325,16 @@ public class FakeSftpServerRule implements TestRule {
         verifyThatTestIsRunning("check existence of file");
         Path pathAsObject = fileSystem.getPath(path);
         return exists(pathAsObject) && !isDirectory(pathAsObject);
+    }
+
+    /**
+     * Deletes all files and directories.
+     * @throws IOException if an I/O error is thrown while deleting the files
+     * and directories
+     */
+    public void deleteAllFilesAndDirectories() throws IOException {
+        for (Path directory: fileSystem.getRootDirectories())
+            walkFileTree(directory, DELETE_FILES_AND_DIRECTORIES);
     }
 
     @Override

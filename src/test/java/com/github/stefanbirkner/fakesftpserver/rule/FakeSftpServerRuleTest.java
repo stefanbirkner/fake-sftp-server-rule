@@ -847,7 +847,7 @@ public class FakeSftpServerRuleTest {
         FakeSftpServerRule server,
         String pathAsString,
         byte[] content
-    ) throws JSchException, SftpException, IOException {
+    ) throws JSchException, SftpException {
         Session session = connectToServer(server);
         ChannelSftp channel = connectSftpChannel(session);
         try {

@@ -16,7 +16,8 @@ I want to thank my former team SAM at ThoughtWorks for using this library.
 
 ## Installation
 
-Fake SFTP Server Rule is available from [Maven Central](http://search.maven.org/).
+Fake SFTP Server Rule is available from
+[Maven Central](https://search.maven.org/#search|ga|1|fake-sftp-server-rule).
 
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>

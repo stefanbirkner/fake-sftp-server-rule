@@ -156,7 +156,7 @@ simply have a question about Fake SFTP Server Rule.
 ## Development Guide
 
 Fake SFTP Server Rule is build with [Maven](http://maven.apache.org/). If you
-want to contribute code than
+want to contribute code then
 
 * Please write a test for your change.
 * Ensure that you didn't break the build by running `mvn verify -Dgpg.skip`.

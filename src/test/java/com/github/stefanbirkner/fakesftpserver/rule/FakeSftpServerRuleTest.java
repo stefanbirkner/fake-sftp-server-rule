@@ -3,6 +3,7 @@ package com.github.stefanbirkner.fakesftpserver.rule;
 
 import com.jcraft.jsch.*;
 import org.apache.commons.io.IOUtils;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
@@ -62,14 +63,6 @@ public class FakeSftpServerRuleTest {
     }
 
     public static class connection {
-        @Test
-        public void the_server_accepts_connections_with_password() {
-            FakeSftpServerRule sftpServer = new FakeSftpServerRule();
-            executeTestWithRule(
-                () -> connectToServer(sftpServer),
-                sftpServer
-            );
-        }
 
         @Test
         public void multiple_connections_to_the_server_are_possible() {
@@ -91,6 +84,159 @@ public class FakeSftpServerRuleTest {
                 () -> connectToServerAtPort(8394),
                 sftpServer
             );
+        }
+    }
+
+    @RunWith(Enclosed.class)
+    public static class authentication {
+        public static class server_without_credentials {
+            @Test
+            public void the_server_accepts_connections_with_password() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithCredentials(
+                            sftpServer,
+                            "dummy user",
+                            "dummy password"
+                        );
+                        session.connect(TIMEOUT);
+                    },
+                    sftpServer
+                );
+            }
+        }
+
+        public static class server_with_credentials_immediately_set {
+            @Test
+            public void the_server_accepts_connections_with_correct_password() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .addUser("dummy user", "dummy password");
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithCredentials(
+                            sftpServer,
+                            "dummy user",
+                            "dummy password"
+                        );
+                        session.connect(TIMEOUT);
+                    },
+                    sftpServer
+                );
+            }
+
+
+            @Test
+            public void the_server_rejects_connections_with_wrong_password() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .addUser("dummy user", "correct password");
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithCredentials(
+                            sftpServer,
+                            "dummy user",
+                            "wrong password"
+                        );
+                        assertAuthenticationFails(
+                            () -> session.connect(TIMEOUT)
+                        );
+                    },
+                    sftpServer
+                );
+            }
+
+            @Test
+            public void the_last_password_is_effective_if_addUser_is_called_multiple_times() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .addUser("dummy user", "first password")
+                    .addUser("dummy user", "second password");
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithCredentials(
+                            sftpServer,
+                            "dummy user",
+                            "second password"
+                        );
+                        session.connect(TIMEOUT);
+                    },
+                    sftpServer
+                );
+            }
+        }
+
+        public static class server_with_credentials_set_during_test {
+            @Test
+            public void the_server_accepts_connections_with_correct_password() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {
+                        sftpServer.addUser("dummy user", "dummy password");
+                        Session session = createSessionWithCredentials(
+                            sftpServer,
+                            "dummy user",
+                            "dummy password"
+                        );
+                        session.connect(TIMEOUT);
+                    },
+                    sftpServer
+                );
+            }
+
+            @Test
+            public void the_server_rejects_connections_with_wrong_password() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {
+                        sftpServer.addUser("dummy user", "correct password");
+                        Session session = createSessionWithCredentials(
+                            sftpServer,
+                            "dummy user",
+                            "wrong password"
+                        );
+                        assertAuthenticationFails(
+                            () -> session.connect(TIMEOUT)
+                        );
+                    },
+                    sftpServer
+                );
+            }
+
+            @Test
+            public void the_last_password_is_effective_if_addUser_is_called_multiple_times() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {
+                        sftpServer
+                            .addUser("dummy user", "first password")
+                            .addUser("dummy user", "second password");
+                        Session session = createSessionWithCredentials(
+                            sftpServer,
+                            "dummy user",
+                            "second password"
+                        );
+                        session.connect(TIMEOUT);
+                    },
+                    sftpServer
+                );
+            }
+        }
+
+        private static Session createSessionWithCredentials(
+            FakeSftpServerRule sftpServer,
+            String username,
+            String password
+        ) throws JSchException {
+            return FakeSftpServerRuleTest.createSessionWithCredentials(
+                username, password, sftpServer.getPort()
+            );
+        }
+
+        private static void assertAuthenticationFails(
+            ThrowingCallable connectToServer
+        ) {
+            assertThatThrownBy(connectToServer)
+                .isInstanceOf(JSchException.class)
+                .hasMessage("Auth fail");
         }
     }
 

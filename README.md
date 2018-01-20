@@ -12,7 +12,7 @@ Fake SFTP Server Rule is published under the
 if you want to use it with an older version of Java.
 
 I want to thank my former team SAM at ThoughtWorks for using this library and
-@OArtyomov for his feature request.
+@crizzis and @OArtyomov for their feature requests.
 
 
 ## Installation
@@ -23,7 +23,7 @@ Fake SFTP Server Rule is available from
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>1.3.1</version>
+      <version>1.4.0</version>
     </dependency>
 
 
@@ -42,9 +42,19 @@ The Fake SFTP Server Rule is used by adding it to your test class.
 
 This rule starts a server before your test and stops it afterwards.
 
-You can interact with the SFTP server by using the SFTP protocol with an
-arbitrary username and password. (The server accepts every combination of
-username and password.)
+You can interact with the SFTP server by using the SFTP protocol with password
+authentication. By default the server accepts every pair of username and
+password, but you can restrict it to specific pairs.
+
+    public class TestClass {
+      @Rule
+      public final FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+          .addUser("username", "password");
+
+      ...
+    }
+
+It is also possible to do this during the test using the same method.
 
 The port of the server is obtained by `sftpServer.getPort()`. You can change it
 by calling `setPort(int)`. If you do this from within a test then the server

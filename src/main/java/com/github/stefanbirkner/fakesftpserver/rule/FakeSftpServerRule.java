@@ -1,8 +1,8 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
 import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.auth.password.StaticPasswordAuthenticator;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
+import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -15,6 +15,9 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
@@ -35,9 +38,19 @@ import static java.util.Collections.singletonList;
  * }
  * </pre>
  * <p>This rule starts a server before your test and stops it afterwards.
- * <p>You can interact with the SFTP server by using the SFTP protocol with an
- * arbitrary username and password. (The server accepts every combination of
- * username and password.)
+ * <p>You can interact with the SFTP server by using the SFTP protocol with
+ * password authentication. By default the server accepts every pair of
+ * username and password, buy you can restrict it to specific pairs.
+ * <pre>
+ * public class TestClass {
+ *   &#064;Rule
+ *   public final FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+ *       .{@link #addUser(String, String) addUser}("username", "password");
+ *
+ *   ...
+ * }
+ * </pre>
+ * <p>It is also possible to do this during the test using the same method.
  * <p>The port of the server is obtained by
  * {@link #getPort() sftpServer.getPort()}. You can change it by calling
  * {@link #setPort(int)}. If you do this from within a test then the server gets
@@ -164,6 +177,7 @@ public class FakeSftpServerRule implements TestRule {
                 return super.postVisitDirectory(dir, exc);
             }
     };
+    private final Map<String, String> usernamesAndPasswords = new HashMap<>();
     private int port = 23454;
 
     private FileSystem fileSystem;
@@ -198,6 +212,24 @@ public class FakeSftpServerRule implements TestRule {
         this.port = port;
         if (server != null)
             restartServer();
+        return this;
+    }
+
+    /**
+     * Register a username with its password. After registering a username
+     * it is only possible to connect to the server with one of the registered
+     * username/password pairs.
+     * <p>If {@code addUser} is called multiple times with the same username but
+     * different passwords then the last password is effective.
+     * @param username the username.
+     * @param password the password for the specified username.
+     * @return the rule itself.
+     */
+    public FakeSftpServerRule addUser(
+        String username,
+        String password
+    ) {
+        usernamesAndPasswords.put(username, password);
         return this;
     }
 
@@ -384,7 +416,7 @@ public class FakeSftpServerRule implements TestRule {
         SshServer server = SshServer.setUpDefaultServer();
         server.setPort(port);
         server.setKeyPairProvider(new SimpleGeneratorHostKeyProvider());
-        server.setPasswordAuthenticator(new StaticPasswordAuthenticator(true));
+        server.setPasswordAuthenticator(this::authenticate);
         server.setSubsystemFactories(singletonList(new SftpSubsystemFactory()));
         /* When a channel is closed SshServer calls close() on the file system.
          * In order to use the file system for multiple channels/sessions we
@@ -394,6 +426,18 @@ public class FakeSftpServerRule implements TestRule {
         server.start();
         this.server = server;
         return server;
+    }
+
+    private boolean authenticate(
+        String username,
+        String password,
+        ServerSession session
+    ) {
+        return usernamesAndPasswords.isEmpty()
+            || Objects.equals(
+                usernamesAndPasswords.get(username),
+                password
+            );
     }
 
     private void ensureDirectoryOfPathExists(

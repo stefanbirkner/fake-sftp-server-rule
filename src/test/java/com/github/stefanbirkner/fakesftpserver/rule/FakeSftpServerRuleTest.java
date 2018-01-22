@@ -841,7 +841,7 @@ public class FakeSftpServerRuleTest {
             FakeSftpServerRule sftpServer = new FakeSftpServerRule();
             executeTestWithRule(
                 () -> {
-                    sftpServer.createDirectory("dummy_directory");
+                    sftpServer.createDirectory("/dummy_directory");
                     sftpServer.deleteAllFilesAndDirectories();
                     assertDirectoryDoesNotExist(
                         sftpServer,

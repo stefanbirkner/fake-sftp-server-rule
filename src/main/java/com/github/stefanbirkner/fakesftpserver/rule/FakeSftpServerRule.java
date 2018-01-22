@@ -153,7 +153,17 @@ public class FakeSftpServerRule implements TestRule {
                 delete(file);
                 return CONTINUE;
             }
-        };
+
+            @Override
+            public FileVisitResult postVisitDirectory(
+                Path dir,
+                IOException exc
+            ) throws IOException {
+                if (dir.getParent() != null)
+                    delete(dir);
+                return super.postVisitDirectory(dir, exc);
+            }
+    };
     private int port = 23454;
 
     private FileSystem fileSystem;

@@ -878,7 +878,7 @@ public class FakeSftpServerRuleTest {
             try {
                 assertThatThrownBy(() -> channel.ls(directory))
                     .isInstanceOf(SftpException.class)
-                    .hasMessage("Internal FileNotFoundException: " + directory);
+                    .hasMessage("No such file or directory");
             } finally {
                 channel.disconnect();
                 session.disconnect();

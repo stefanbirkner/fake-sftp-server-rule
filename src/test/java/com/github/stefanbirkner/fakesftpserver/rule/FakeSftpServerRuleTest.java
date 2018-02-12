@@ -895,10 +895,9 @@ public class FakeSftpServerRuleTest {
     private static Session connectToServerAtPort(
         int port
     ) throws JSchException {
-        Session session = JSCH.getSession(
-            "dummy user", "127.0.0.1", port);
-        session.setConfig("StrictHostKeyChecking", "no");
-        session.setPassword("dummy password");
+        Session session = createSessionWithCredentials(
+            "dummy user", "dummy password", port
+        );
         session.connect(TIMEOUT);
         return session;
     }
@@ -918,6 +917,17 @@ public class FakeSftpServerRuleTest {
         ChannelSftp channel = connectSftpChannel(session);
         channel.disconnect();
         session.disconnect();
+    }
+
+    private static Session createSessionWithCredentials(
+        String username,
+        String password,
+        int port
+    ) throws JSchException {
+        Session session = JSCH.getSession(username, "127.0.0.1", port);
+        session.setConfig("StrictHostKeyChecking", "no");
+        session.setPassword(password);
+        return session;
     }
 
     private static byte[] downloadFile(

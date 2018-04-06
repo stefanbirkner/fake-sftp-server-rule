@@ -7,7 +7,8 @@ your tests are running. It uses the SFTP server of the
 [Apache SSHD](http://mina.apache.org/sshd-project/index.html) project.
 
 Fake SFTP Server Rule is published under the
-[MIT license](http://opensource.org/licenses/MIT). It uses Java 8. Please
+[MIT license](http://opensource.org/licenses/MIT). It requires at least Java 8.
+Please
 [open an issue](https://github.com/stefanbirkner/fake-sftp-server-rule/issues/new)
 if you want to use it with an older version of Java.
 

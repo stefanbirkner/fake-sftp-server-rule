@@ -38,19 +38,6 @@ import static java.util.Collections.singletonList;
  * }
  * </pre>
  * <p>This rule starts a server before your test and stops it afterwards.
- * <p>You can interact with the SFTP server by using the SFTP protocol with
- * password authentication. By default the server accepts every pair of
- * username and password, buy you can restrict it to specific pairs.
- * <pre>
- * public class TestClass {
- *   &#064;Rule
- *   public final FakeSftpServerRule sftpServer = new FakeSftpServerRule()
- *       .{@link #addUser(String, String) addUser}("username", "password");
- *
- *   ...
- * }
- * </pre>
- * <p>It is also possible to do this during the test using the same method.
  * <p>By default the SFTP server listens on an auto-allocated port. During the
  * test this port can be obtained by {@link #getPort() sftpServer.getPort()}. It
  * can be changed by calling {@link #setPort(int)}. If you do this from within a
@@ -65,6 +52,19 @@ import static java.util.Collections.singletonList;
  *   ...
  * }
  * </pre>
+ * <p>You can interact with the SFTP server by using the SFTP protocol with
+ * password authentication. By default the server accepts every pair of
+ * username and password, buy you can restrict it to specific pairs.
+ * <pre>
+ * public class TestClass {
+ *   &#064;Rule
+ *   public final FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+ *       .{@link #addUser(String, String) addUser}("username", "password");
+ *
+ *   ...
+ * }
+ * </pre>
+ * <p>It is also possible to do this during the test using the same method.
  *
  * <h2>Testing code that reads files</h2>
  * <p>If you test code that reads files from an SFTP server then you need the

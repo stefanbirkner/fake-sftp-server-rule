@@ -45,20 +45,6 @@ The Fake SFTP Server Rule is used by adding it to your test class.
 
 This rule starts a server before your test and stops it afterwards.
 
-You can interact with the SFTP server by using the SFTP protocol with password
-authentication. By default the server accepts every pair of username and
-password, but you can restrict it to specific pairs.
-
-    public class TestClass {
-      @Rule
-      public final FakeSftpServerRule sftpServer = new FakeSftpServerRule()
-          .addUser("username", "password");
-
-      ...
-    }
-
-It is also possible to do this during the test using the same method.
-
 By default the SFTP server listens on an auto-allocated port. During the test
 this port can be obtained by `sftpServer.getPort()`. It can be changed
 by calling `setPort(int)`. If you do this from within a test then the server
@@ -72,6 +58,20 @@ immediately after creating the rule.
 
       ...
     }
+
+You can interact with the SFTP server by using the SFTP protocol with password
+authentication. By default the server accepts every pair of username and
+password, but you can restrict it to specific pairs.
+
+    public class TestClass {
+      @Rule
+      public final FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+          .addUser("username", "password");
+
+      ...
+    }
+
+It is also possible to do this during the test using the same method.
 
 ### Testing code that reads files
 

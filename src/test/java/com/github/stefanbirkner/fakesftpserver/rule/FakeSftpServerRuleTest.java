@@ -1,22 +1,6 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
 
-import com.jcraft.jsch.*;
-import org.apache.commons.io.IOUtils;
-import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.ConnectException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Vector;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestThatThrowsExceptionWithRule;
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestWithRule;
 import static com.github.stefanbirkner.fishbowl.Fishbowl.exceptionThrownBy;
@@ -26,16 +10,57 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.commons.io.IOUtils;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+import org.slf4j.LoggerFactory;
+
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
+
 /* Wording according to the draft:
  * http://tools.ietf.org/html/draft-ietf-secsh-filexfer-13
  */
 @RunWith(Enclosed.class)
 public class FakeSftpServerRuleTest {
+    
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(FakeSftpServerRuleTest.class);
+
     private static final byte[] DUMMY_CONTENT = new byte[]{1, 4, 2, 4, 2, 4};
     private static final int DUMMY_PORT = 46354;
     private static final InputStream DUMMY_STREAM = new ByteArrayInputStream(DUMMY_CONTENT);
     private static final JSch JSCH = new JSch();
     private static final int TIMEOUT = 200;
+    private static Path DUMMY_KEY;
+    private static Path DUMMY_AUTHORIZED_KEYS;
+    private static Path EMPTY_AUTHORIZED_KEYS;
+    private static final String DUMMY_KEY_PASSPHRASE = "unittest";
+
+    static {
+        try {
+            DUMMY_KEY = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/dummy_key").toURI());
+            DUMMY_AUTHORIZED_KEYS = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/dummy_key.pub").toURI());
+            EMPTY_AUTHORIZED_KEYS = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/empty_authorized_keys").toURI());
+        } catch (URISyntaxException e) {
+            log.error("Error loading SSH keys", e);
+        }
+    }
 
     public static class round_trip {
         @Test
@@ -101,6 +126,24 @@ public class FakeSftpServerRuleTest {
                             "dummy password"
                         );
                         session.connect(TIMEOUT);
+                    },
+                    sftpServer
+                );
+            }
+            
+            @Test
+            public void the_server_accepts_connections_with_identity() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule();
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithIdentity(
+                            sftpServer,
+                            "dummy user",
+                            DUMMY_KEY.toString(),
+                            DUMMY_KEY_PASSPHRASE
+                        );
+                        session.connect(TIMEOUT);
+                        JSCH.removeAllIdentity();
                     },
                     sftpServer
                 );
@@ -221,6 +264,99 @@ public class FakeSftpServerRuleTest {
             }
         }
 
+        public static class server_with_identity_immediately_set {
+            
+            Path privateKeyPath;
+            Path authorizedKeysPath;
+            @Before
+            public void setupIdentity() throws URISyntaxException {
+                privateKeyPath  = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/dummy_key").toURI());
+                authorizedKeysPath  = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/dummy_key.pub").toURI());
+            }
+            
+            @Test
+            public void the_server_accepts_connections_with_correct_identity() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .addIdentity("dummy user", DUMMY_AUTHORIZED_KEYS);
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithIdentity(
+                            sftpServer,
+                            "dummy user",
+                            DUMMY_KEY.toString(),
+                            DUMMY_KEY_PASSPHRASE
+                        );
+                        session.connect(TIMEOUT);
+                        JSCH.removeAllIdentity();
+                    },
+                    sftpServer
+                );
+            }
+
+
+            @Test
+            public void the_server_rejects_connections_with_wrong_passphrase() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .addIdentity("dummy user", DUMMY_AUTHORIZED_KEYS);
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithIdentity(
+                                sftpServer,
+                                "dummy user",
+                                DUMMY_KEY.toString(),
+                                "invalid"
+                        );
+                        assertAuthenticationFails(
+                            () -> session.connect(TIMEOUT)
+                        );
+                        JSCH.removeAllIdentity();
+                    },
+                    sftpServer
+                );
+            }
+
+            @Test
+            public void the_server_rejects_connections_with_wrong_key() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .addIdentity("dummy user", EMPTY_AUTHORIZED_KEYS);
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithIdentity(
+                                sftpServer,
+                                "dummy user",
+                                DUMMY_KEY.toString(),
+                                DUMMY_KEY_PASSPHRASE
+                        );
+                        assertAuthenticationFails(
+                            () -> session.connect(TIMEOUT)
+                        );
+                        JSCH.removeAllIdentity();
+                    },
+                    sftpServer
+                );
+            }
+
+            @Test
+            public void the_last_key_is_effective_if_addIdentity_is_called_multiple_times() {
+                FakeSftpServerRule sftpServer = new FakeSftpServerRule()
+                    .addIdentity("dummy user", EMPTY_AUTHORIZED_KEYS)
+                    .addIdentity("dummy user", DUMMY_AUTHORIZED_KEYS);
+                executeTestWithRule(
+                    () -> {
+                        Session session = createSessionWithIdentity(
+                                sftpServer,
+                                "dummy user",
+                                DUMMY_KEY.toString(),
+                                DUMMY_KEY_PASSPHRASE
+                            );
+                            session.connect(TIMEOUT);
+                            JSCH.removeAllIdentity();
+                    },
+                    sftpServer
+                );
+            }
+        }
+        
         private static Session createSessionWithCredentials(
             FakeSftpServerRule sftpServer,
             String username,
@@ -230,13 +366,24 @@ public class FakeSftpServerRuleTest {
                 username, password, sftpServer.getPort()
             );
         }
+        
+        private static Session createSessionWithIdentity(
+                FakeSftpServerRule sftpServer,
+                String username,
+                String prvkey,
+                String passphrase
+            ) throws JSchException {
+                return FakeSftpServerRuleTest.createSessionWithIdentity(
+                    username, prvkey, passphrase, sftpServer.getPort()
+                );
+            }
 
         private static void assertAuthenticationFails(
             ThrowingCallable connectToServer
         ) {
             assertThatThrownBy(connectToServer)
                 .isInstanceOf(JSchException.class)
-                .hasMessage("Auth fail");
+                .hasMessageMatching("(Auth|USERAUTH) fail");
         }
     }
 
@@ -1131,6 +1278,19 @@ public class FakeSftpServerRuleTest {
         Session session = JSCH.getSession(username, "127.0.0.1", port);
         session.setConfig("StrictHostKeyChecking", "no");
         session.setPassword(password);
+        return session;
+    }
+    
+    private static Session createSessionWithIdentity(
+        String username,
+        String prvkey,
+        String passphrase,
+        int port
+    ) throws JSchException {
+        // if you need detailed information add a logger to JSCH
+        JSCH.addIdentity(prvkey, passphrase);
+        Session session = JSCH.getSession(username, "127.0.0.1", port);
+        session.setConfig("StrictHostKeyChecking", "no");
         return session;
     }
 

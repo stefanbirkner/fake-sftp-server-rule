@@ -505,7 +505,10 @@ public class FakeSftpServerRule implements TestRule {
             return false;
         }
         Path path = usernamesAndIdentities.get(username);
-        return new DefaultAuthorizedKeysAuthenticator(username, path, true).authenticate(username, publicKey, session);
+        // don't load authorized keys in strict mode
+        // strict mode forces checks on 'authorized_keys' files for security
+        // but this is a test rule and CI builders might not force permissions
+        return new DefaultAuthorizedKeysAuthenticator(username, path, false).authenticate(username, publicKey, session);
     }
 
     private void ensureDirectoryOfPathExists(

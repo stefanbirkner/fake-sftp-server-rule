@@ -1,5 +1,6 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
+import java.util.function.Consumer;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
@@ -182,6 +183,23 @@ public class FakeSftpServerRule implements TestRule {
 
     private FileSystem fileSystem;
     private SshServer server;
+    private Consumer<SshServer> sshServerConsumer = (sshServer) -> {};
+
+    /**
+     * Configures the internal SFTP server of the Apache SSHD project.
+     * If you need personal changes in internal SFTP server that
+     * are not supported by the rule, you can use this method to get the inner
+     * internal SFTP server of the rule before construction and change it to
+     * suit your needs.
+     * (Correct use of this feature is the responsibility of the user)
+     *
+     * @param sshServerConsumer internal SFTP server consumer
+     * @return the rule itself.
+     */
+    public FakeSftpServerRule configureInternalSshServer(Consumer<SshServer> sshServerConsumer) {
+        this.sshServerConsumer = sshServerConsumer;
+        return this;
+    }
 
     /**
      * Returns the port of the SFTP server. If the SFTP server listens on an
@@ -435,6 +453,7 @@ public class FakeSftpServerRule implements TestRule {
          * have to use a file system wrapper whose close() does nothing.
          */
         server.setFileSystemFactory(session -> new DoNotClose(fileSystem));
+        sshServerConsumer.accept(server);
         server.start();
         this.server = server;
         return server;

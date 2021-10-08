@@ -27,7 +27,7 @@ Fake SFTP Server Rule is available from
     <dependency>
       <groupId>com.github.stefanbirkner</groupId>
       <artifactId>fake-sftp-server-rule</artifactId>
-      <version>2.0.1</version>
+      <version>2.1.1</version>
     </dependency>
 
 If you upgrade from a version < 2.x to the newest version please read the last

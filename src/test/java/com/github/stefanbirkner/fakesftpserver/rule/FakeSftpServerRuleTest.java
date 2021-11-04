@@ -46,7 +46,7 @@ public class FakeSftpServerRuleTest {
     private static final int DUMMY_PORT = 46354;
     private static final InputStream DUMMY_STREAM = new ByteArrayInputStream(DUMMY_CONTENT);
     private static final JSch JSCH = new JSch();
-    private static final int TIMEOUT = 200;
+    private static final int TIMEOUT = 500;
     private static Path DUMMY_KEY;
     private static Path DUMMY_AUTHORIZED_KEYS;
     private static Path EMPTY_AUTHORIZED_KEYS;

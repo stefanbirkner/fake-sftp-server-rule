@@ -15,6 +15,9 @@ if you want to use it with an older version of Java.
 I want to thank my former team SAM at ThoughtWorks for using this library and
 @crizzis, @OArtyomov and @TheSentinel454 for their feature requests.
 
+There is an alternative to Fake SFTP Server Rule that is independent of the
+test framework. Its name is
+[Fake SFTP Server Lambda](https://github.com/stefanbirkner/fake-sftp-server-lambda).
 
 ## Installation
 

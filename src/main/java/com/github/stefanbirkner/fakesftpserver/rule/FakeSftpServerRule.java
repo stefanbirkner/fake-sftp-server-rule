@@ -1,29 +1,44 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
+import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
+import static java.nio.file.FileVisitResult.CONTINUE;
+import static java.nio.file.Files.copy;
+import static java.nio.file.Files.delete;
+import static java.nio.file.Files.exists;
+import static java.nio.file.Files.isDirectory;
+import static java.nio.file.Files.readAllBytes;
+import static java.nio.file.Files.walkFileTree;
+import static java.nio.file.Files.write;
+import static java.util.Collections.singletonList;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.nio.file.FileStore;
+import java.nio.file.FileSystem;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.PathMatcher;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.UserPrincipalLookupService;
+import java.nio.file.spi.FileSystemProvider;
+import java.security.PublicKey;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
 import org.apache.sshd.server.SshServer;
+import org.apache.sshd.server.config.keys.DefaultAuthorizedKeysAuthenticator;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.UserPrincipalLookupService;
-import java.nio.file.spi.FileSystemProvider;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
-import static java.nio.file.FileVisitResult.CONTINUE;
-import static java.nio.file.Files.*;
-import static java.util.Collections.singletonList;
 
 /**
  * Fake SFTP Server Rule is a JUnit rule that runs an in-memory SFTP server
@@ -178,6 +193,7 @@ public class FakeSftpServerRule implements TestRule {
             }
     };
     private final Map<String, String> usernamesAndPasswords = new HashMap<>();
+    private final Map<String, Path> usernamesAndIdentities = new HashMap<>();
     private int port = 0;
 
     private FileSystem fileSystem;
@@ -242,6 +258,27 @@ public class FakeSftpServerRule implements TestRule {
         String password
     ) {
         usernamesAndPasswords.put(username, password);
+        return this;
+    }
+
+    /**
+     * Register a username with its identity key and password. After registering a username
+     * it is only possible to connect to the server with one of the registered
+     * username/password or username/identity pairs.
+     * <p>If {@code addIdentity} is called multiple times with the same username but
+     * different keys then the last key is effective.</p>
+     * <p>This method is compatible with {@code addUser} meaning if you call
+     * both then the last username/password is effective and the last
+     * username/identity is effective.</p>
+     * @param username the username.
+     * @param identityPath path to identity file (e.g. authorized_keys file).
+     * @return the rule itself.
+     */
+    public FakeSftpServerRule addIdentity(
+        String username,
+        Path identityPath
+    ) {
+        usernamesAndIdentities.put(username, identityPath);
         return this;
     }
 
@@ -429,6 +466,7 @@ public class FakeSftpServerRule implements TestRule {
         server.setPort(port);
         server.setKeyPairProvider(new SimpleGeneratorHostKeyProvider());
         server.setPasswordAuthenticator(this::authenticate);
+        server.setPublickeyAuthenticator(this::authenticatePublicKey);
         server.setSubsystemFactories(singletonList(new SftpSubsystemFactory()));
         /* When a channel is closed SshServer calls close() on the file system.
          * In order to use the file system for multiple channels/sessions we
@@ -439,17 +477,38 @@ public class FakeSftpServerRule implements TestRule {
         this.server = server;
         return server;
     }
+    
+    private boolean emptySecurity() {
+        return usernamesAndPasswords.isEmpty() && usernamesAndIdentities.isEmpty();
+    }
 
     private boolean authenticate(
         String username,
         String password,
         ServerSession session
     ) {
-        return usernamesAndPasswords.isEmpty()
+        return emptySecurity()
             || Objects.equals(
                 usernamesAndPasswords.get(username),
                 password
             );
+    }
+    
+    private boolean authenticatePublicKey(
+            String username,
+            PublicKey publicKey,
+            ServerSession session
+        ) {
+        if (emptySecurity()) {
+            return true;
+        } else if (!usernamesAndIdentities.containsKey(username)) {
+            return false;
+        }
+        Path path = usernamesAndIdentities.get(username);
+        // don't load authorized keys in strict mode
+        // strict mode forces checks on 'authorized_keys' files for security
+        // but this is a test rule and CI builders might not force permissions
+        return new DefaultAuthorizedKeysAuthenticator(username, path, false).authenticate(username, publicKey, session);
     }
 
     private void ensureDirectoryOfPathExists(

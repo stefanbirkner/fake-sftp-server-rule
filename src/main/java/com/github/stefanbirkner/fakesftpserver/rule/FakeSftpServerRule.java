@@ -1,27 +1,18 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
-import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
-import static java.nio.file.FileVisitResult.CONTINUE;
-import static java.nio.file.Files.copy;
-import static java.nio.file.Files.delete;
-import static java.nio.file.Files.exists;
-import static java.nio.file.Files.isDirectory;
-import static java.nio.file.Files.readAllBytes;
-import static java.nio.file.Files.walkFileTree;
-import static java.nio.file.Files.write;
-import static java.util.Collections.singletonList;
+import org.apache.sshd.server.SshServer;
+import org.apache.sshd.server.config.keys.DefaultAuthorizedKeysAuthenticator;
+import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
+import org.apache.sshd.server.session.ServerSession;
+import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.PathMatcher;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
@@ -31,14 +22,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.config.keys.DefaultAuthorizedKeysAuthenticator;
-import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
-import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
+import static java.nio.file.FileVisitResult.CONTINUE;
+import static java.nio.file.Files.*;
+import static java.util.Collections.singletonList;
 
 /**
  * Fake SFTP Server Rule is a JUnit rule that runs an in-memory SFTP server
@@ -477,38 +464,41 @@ public class FakeSftpServerRule implements TestRule {
         this.server = server;
         return server;
     }
-    
-    private boolean emptySecurity() {
-        return usernamesAndPasswords.isEmpty() && usernamesAndIdentities.isEmpty();
-    }
 
     private boolean authenticate(
         String username,
         String password,
         ServerSession session
     ) {
-        return emptySecurity()
+        return isNoAuthenticationRequired()
             || Objects.equals(
                 usernamesAndPasswords.get(username),
                 password
             );
     }
-    
+
     private boolean authenticatePublicKey(
             String username,
             PublicKey publicKey,
             ServerSession session
-        ) {
-        if (emptySecurity()) {
+    ) {
+        if (isNoAuthenticationRequired()) {
             return true;
         } else if (!usernamesAndIdentities.containsKey(username)) {
             return false;
+        } else {
+            Path path = usernamesAndIdentities.get(username);
+            // don't load authorized keys in strict mode
+            // strict mode forces checks on 'authorized_keys' files for security
+            // but this is a test rule and CI builders might not force permissions
+            return new DefaultAuthorizedKeysAuthenticator(username, path, false)
+                .authenticate(username, publicKey, session);
         }
-        Path path = usernamesAndIdentities.get(username);
-        // don't load authorized keys in strict mode
-        // strict mode forces checks on 'authorized_keys' files for security
-        // but this is a test rule and CI builders might not force permissions
-        return new DefaultAuthorizedKeysAuthenticator(username, path, false).authenticate(username, publicKey, session);
+    }
+
+    private boolean isNoAuthenticationRequired() {
+        return usernamesAndPasswords.isEmpty()
+            && usernamesAndIdentities.isEmpty();
     }
 
     private void ensureDirectoryOfPathExists(

@@ -1,14 +1,13 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
 
-import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestThatThrowsExceptionWithRule;
-import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestWithRule;
-import static com.github.stefanbirkner.fishbowl.Fishbowl.exceptionThrownBy;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.io.IOUtils.toByteArray;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
+import com.jcraft.jsch.*;
+import org.apache.commons.io.IOUtils;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -20,27 +19,20 @@ import java.nio.file.Paths;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.io.IOUtils;
-import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-import org.slf4j.LoggerFactory;
-
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpException;
+import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestThatThrowsExceptionWithRule;
+import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestWithRule;
+import static com.github.stefanbirkner.fishbowl.Fishbowl.exceptionThrownBy;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.commons.io.IOUtils.toByteArray;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 /* Wording according to the draft:
  * http://tools.ietf.org/html/draft-ietf-secsh-filexfer-13
  */
 @RunWith(Enclosed.class)
 public class FakeSftpServerRuleTest {
-    
-    private static final org.slf4j.Logger log = LoggerFactory.getLogger(FakeSftpServerRuleTest.class);
 
     private static final byte[] DUMMY_CONTENT = new byte[]{1, 4, 2, 4, 2, 4};
     private static final int DUMMY_PORT = 46354;
@@ -58,7 +50,7 @@ public class FakeSftpServerRuleTest {
             DUMMY_AUTHORIZED_KEYS = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/dummy_key.pub").toURI());
             EMPTY_AUTHORIZED_KEYS = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/empty_authorized_keys").toURI());
         } catch (URISyntaxException e) {
-            log.error("Error loading SSH keys", e);
+            throw new RuntimeException("Error loading SSH keys", e);
         }
     }
 
@@ -130,7 +122,7 @@ public class FakeSftpServerRuleTest {
                     sftpServer
                 );
             }
-            
+
             @Test
             public void the_server_accepts_connections_with_identity() {
                 FakeSftpServerRule sftpServer = new FakeSftpServerRule();
@@ -265,15 +257,16 @@ public class FakeSftpServerRuleTest {
         }
 
         public static class server_with_identity_immediately_set {
-            
+
             Path privateKeyPath;
             Path authorizedKeysPath;
+
             @Before
             public void setupIdentity() throws URISyntaxException {
                 privateKeyPath  = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/dummy_key").toURI());
                 authorizedKeysPath  = Paths.get(FakeSftpServerRuleTest.class.getResource("/keys/dummy_key.pub").toURI());
             }
-            
+
             @Test
             public void the_server_accepts_connections_with_correct_identity() {
                 FakeSftpServerRule sftpServer = new FakeSftpServerRule()
@@ -356,7 +349,7 @@ public class FakeSftpServerRuleTest {
                 );
             }
         }
-        
+
         private static Session createSessionWithCredentials(
             FakeSftpServerRule sftpServer,
             String username,
@@ -366,7 +359,7 @@ public class FakeSftpServerRuleTest {
                 username, password, sftpServer.getPort()
             );
         }
-        
+
         private static Session createSessionWithIdentity(
                 FakeSftpServerRule sftpServer,
                 String username,
@@ -1280,7 +1273,7 @@ public class FakeSftpServerRuleTest {
         session.setPassword(password);
         return session;
     }
-    
+
     private static Session createSessionWithIdentity(
         String username,
         String prvkey,

@@ -4,9 +4,9 @@ import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -155,7 +155,7 @@ import static java.util.Collections.singletonList;
  * itself takes care that every test starts and ends with a clean SFTP server.)
  * <pre>{@link #deleteAllFilesAndDirectories() sftpServer.deleteAllFilesAndDirectories()};</pre>
  */
-public class FakeSftpServerRule implements TestRule {
+public class FakeSftpServerRule implements BeforeEachCallback, AfterEachCallback {
     private static final SimpleFileVisitor<Path> DELETE_FILES_AND_DIRECTORIES
         = new SimpleFileVisitor<Path>() {
             @Override
@@ -177,6 +177,7 @@ public class FakeSftpServerRule implements TestRule {
                 return super.postVisitDirectory(dir, exc);
             }
     };
+    
     private final Map<String, String> usernamesAndPasswords = new HashMap<>();
     private int port = 0;
 
@@ -390,30 +391,17 @@ public class FakeSftpServerRule implements TestRule {
         for (Path directory: fileSystem.getRootDirectories())
             walkFileTree(directory, DELETE_FILES_AND_DIRECTORIES);
     }
+    
+    @Override
+    public void beforeEach(ExtensionContext context) throws Exception {
+        startServer(createFileSystem());
+    }
 
     @Override
-    public Statement apply(
-        Statement base,
-        Description description
-    ) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                try (
-                    FileSystem fileSystem = createFileSystem()
-                ) {
-                    startServer(fileSystem);
-                    try {
-                        base.evaluate();
-                    } finally {
-                        server.stop();
-                        server = null;
-                    }
-                } finally {
-                    fileSystem = null;
-                }
-            }
-        };
+    public void afterEach(ExtensionContext context) throws Exception {
+        server.stop();
+        server = null;
+        fileSystem = null;
     }
 
     private FileSystem createFileSystem(

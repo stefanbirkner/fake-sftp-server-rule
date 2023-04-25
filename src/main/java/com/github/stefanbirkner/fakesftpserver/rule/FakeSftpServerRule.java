@@ -1,9 +1,11 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
+import org.apache.sshd.common.file.FileSystemFactory;
+import org.apache.sshd.common.session.SessionContext;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
+import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -434,7 +436,7 @@ public class FakeSftpServerRule implements TestRule {
          * In order to use the file system for multiple channels/sessions we
          * have to use a file system wrapper whose close() does nothing.
          */
-        server.setFileSystemFactory(session -> new DoNotClose(fileSystem));
+        server.setFileSystemFactory(new DoNotCloseFileSystemFactory(fileSystem));
         server.start();
         this.server = server;
         return server;
@@ -468,6 +470,24 @@ public class FakeSftpServerRule implements TestRule {
                 "Failed to " + mode + " because test has not been started or"
                     + " is already finished."
             );
+    }
+
+    private static class DoNotCloseFileSystemFactory implements FileSystemFactory{
+
+        final FileSystem fileSystem;
+        DoNotCloseFileSystemFactory(FileSystem fileSystem){
+            this.fileSystem = fileSystem;
+        }
+
+        @Override
+        public Path getUserHomeDir(SessionContext sessionContext) throws IOException {
+            return null;
+        }
+
+        @Override
+        public FileSystem createFileSystem(SessionContext sessionContext) throws IOException {
+            return new DoNotClose(fileSystem);
+        }
     }
 
     private static class DoNotClose extends FileSystem {

@@ -1,22 +1,6 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
 
-import com.jcraft.jsch.*;
-import org.apache.commons.io.IOUtils;
-import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.ConnectException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Vector;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestThatThrowsExceptionWithRule;
 import static com.github.stefanbirkner.fakesftpserver.rule.Executor.executeTestWithRule;
 import static com.github.stefanbirkner.fishbowl.Fishbowl.exceptionThrownBy;
@@ -26,12 +10,33 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.ConnectException;
+import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.commons.io.IOUtils;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.Test;
+import org.junit.experimental.runners.Enclosed;
+import org.junit.runner.RunWith;
+
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpException;
+
 /* Wording according to the draft:
  * http://tools.ietf.org/html/draft-ietf-secsh-filexfer-13
  */
 @RunWith(Enclosed.class)
 public class FakeSftpServerRuleTest {
-    private static final byte[] DUMMY_CONTENT = new byte[]{1, 4, 2, 4, 2, 4};
+    private static final byte[] DUMMY_CONTENT = {1, 4, 2, 4, 2, 4};
     private static final int DUMMY_PORT = 46354;
     private static final InputStream DUMMY_STREAM = new ByteArrayInputStream(DUMMY_CONTENT);
     private static final JSch JSCH = new JSch();
@@ -562,7 +567,7 @@ public class FakeSftpServerRuleTest {
         ) throws JSchException, SftpException {
             Session session = connectToServer(sftpServer);
             ChannelSftp channel = connectSftpChannel(session);
-            Vector entries = channel.ls(directory);
+            Vector<?> entries = channel.ls(directory);
             assertThat(entries).hasSize(2); //these are the entries . and ..
             channel.disconnect();
             session.disconnect();
@@ -1157,9 +1162,14 @@ public class FakeSftpServerRuleTest {
         Session session = connectToServer(server);
         ChannelSftp channel = connectSftpChannel(session);
         try {
-            Path path = Paths.get(pathAsString);
-            if (!path.getParent().equals(path.getRoot()))
-                channel.mkdir(path.getParent().toString());
+        	Matcher matcher = Pattern.compile("/.+?/").matcher(pathAsString);
+        	int index = 0;
+        	String dir = "";
+        	while (matcher.find(index)) {
+        		index = matcher.end() - 1;
+        		dir += matcher.group().substring(0, matcher.end() - 1);
+				channel.mkdir(dir);
+        	}
             channel.put(new ByteArrayInputStream(content), pathAsString);
         } finally {
             channel.disconnect();

@@ -1,17 +1,27 @@
 package com.github.stefanbirkner.fakesftpserver.rule;
 
-import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
-import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
+import static java.nio.file.FileVisitResult.CONTINUE;
+import static java.nio.file.Files.copy;
+import static java.nio.file.Files.delete;
+import static java.nio.file.Files.exists;
+import static java.nio.file.Files.isDirectory;
+import static java.nio.file.Files.readAllBytes;
+import static java.nio.file.Files.walkFileTree;
+import static java.nio.file.Files.write;
+import static java.util.Collections.singletonList;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.nio.file.*;
+import java.nio.file.FileStore;
+import java.nio.file.FileSystem;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.PathMatcher;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
@@ -20,10 +30,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static com.github.marschall.memoryfilesystem.MemoryFileSystemBuilder.newLinux;
-import static java.nio.file.FileVisitResult.CONTINUE;
-import static java.nio.file.Files.*;
-import static java.util.Collections.singletonList;
+import org.apache.sshd.common.file.FileSystemFactory;
+import org.apache.sshd.common.session.SessionContext;
+import org.apache.sshd.server.SshServer;
+import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
+import org.apache.sshd.server.session.ServerSession;
+import org.apache.sshd.sftp.server.SftpSubsystemFactory;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
 
 /**
  * Fake SFTP Server Rule is a JUnit rule that runs an in-memory SFTP server
@@ -172,8 +187,9 @@ public class FakeSftpServerRule implements TestRule {
                 Path dir,
                 IOException exc
             ) throws IOException {
-                if (dir.getParent() != null)
-                    delete(dir);
+                if (dir.getParent() != null) {
+					delete(dir);
+				}
                 return super.postVisitDirectory(dir, exc);
             }
     };
@@ -193,10 +209,11 @@ public class FakeSftpServerRule implements TestRule {
      * but haven't called {@link #setPort(int)}) before.
      */
     public int getPort() {
-        if (port == 0)
-            return getPortFromServer();
-        else
-            return port;
+        if (port == 0) {
+			return getPortFromServer();
+		} else {
+			return port;
+		}
     }
 
     private int getPortFromServer() {
@@ -216,14 +233,16 @@ public class FakeSftpServerRule implements TestRule {
     public FakeSftpServerRule setPort(
         int port
     ) {
-        if (port < 1 || port > 65535)
-            throw new IllegalArgumentException(
+        if (port < 1 || port > 65535) {
+			throw new IllegalArgumentException(
                 "Port cannot be set to " + port
                     + " because only ports between 1 and 65535 are valid."
             );
+		}
         this.port = port;
-        if (server != null)
-            restartServer();
+        if (server != null) {
+			restartServer();
+		}
         return this;
     }
 
@@ -330,8 +349,9 @@ public class FakeSftpServerRule implements TestRule {
     public void createDirectories(
         String... paths
     ) throws IOException {
-        for (String path: paths)
-            createDirectory(path);
+        for (String path: paths) {
+			createDirectory(path);
+		}
     }
 
     /**
@@ -387,8 +407,9 @@ public class FakeSftpServerRule implements TestRule {
      * and directories
      */
     public void deleteAllFilesAndDirectories() throws IOException {
-        for (Path directory: fileSystem.getRootDirectories())
-            walkFileTree(directory, DELETE_FILES_AND_DIRECTORIES);
+        for (Path directory: fileSystem.getRootDirectories()) {
+			walkFileTree(directory, DELETE_FILES_AND_DIRECTORIES);
+		}
     }
 
     @Override
@@ -434,7 +455,20 @@ public class FakeSftpServerRule implements TestRule {
          * In order to use the file system for multiple channels/sessions we
          * have to use a file system wrapper whose close() does nothing.
          */
-        server.setFileSystemFactory(session -> new DoNotClose(fileSystem));
+        FileSystemFactory fsFactory = new FileSystemFactory() {
+			
+			@Override
+			public Path getUserHomeDir(SessionContext session) throws IOException {
+				return Path.of("/");
+			}
+			
+			@Override
+			public FileSystem createFileSystem(SessionContext session) throws IOException {
+				return new DoNotClose(fileSystem);
+			}
+		};
+        
+        server.setFileSystemFactory(fsFactory);
         server.start();
         this.server = server;
         return server;
@@ -456,18 +490,20 @@ public class FakeSftpServerRule implements TestRule {
         Path path
     ) throws IOException {
         Path directory = path.getParent();
-        if (directory != null && !directory.equals(path.getRoot()))
-            Files.createDirectories(directory);
+        if (directory != null && !directory.equals(path.getRoot())) {
+			Files.createDirectories(directory);
+		}
     }
 
     private void verifyThatTestIsRunning(
         String mode
     ) {
-        if (fileSystem == null)
-            throw new IllegalStateException(
+        if (fileSystem == null) {
+			throw new IllegalStateException(
                 "Failed to " + mode + " because test has not been started or"
                     + " is already finished."
             );
+		}
     }
 
     private static class DoNotClose extends FileSystem {
